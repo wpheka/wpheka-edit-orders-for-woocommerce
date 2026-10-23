@@ -9,16 +9,23 @@ export MSYS_NO_PATHCONV=1
 WPENV="npx -y @wordpress/env@11"
 CONTAINER="${EO_CONTAINER:-cli}"
 DIR="wp-content/plugins/edit-orders-for-woocommerce/tests/functional"
-SUITES="${1:-p1-engine p2-address-cod m1-admin m2-customer m3-settings m4-hardening m5-matrix m6-review m7-deferred m8-review m9-logging m10-settings-page}"
+SUITES="${1:-p1-engine p2-address-cod m1-admin m2-customer m3-settings m4-hardening m5-matrix m6-review m7-deferred m8-review m9-logging m10-settings-page m11-wc-item-changes}"
 status=0
 
 for hpos in enable disable; do
-	$WPENV run "$CONTAINER" wp wc hpos "$hpos" >/dev/null 2>&1
+	# Switching needs every order in sync; without this the switch fails and the
+	# "HPOS disabled" pass silently runs with HPOS still on.
+	$WPENV run "$CONTAINER" wp wc hpos sync >/dev/null 2>&1
+	if ! $WPENV run "$CONTAINER" wp wc hpos "$hpos" >/dev/null 2>&1; then
+		echo "Could not ${hpos} HPOS; stopping so no pass runs in the wrong mode."
+		exit 1
+	fi
 	for suite in $SUITES; do
 		echo "=== $suite (HPOS ${hpos}d)"
 		$WPENV run "$CONTAINER" wp eval-file "$DIR/$suite.php" || status=1
 	done
 done
 
+$WPENV run "$CONTAINER" wp wc hpos sync >/dev/null 2>&1
 $WPENV run "$CONTAINER" wp wc hpos enable >/dev/null 2>&1
 exit $status
