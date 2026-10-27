@@ -688,7 +688,8 @@ $eo_reset();
 $GLOBALS['current_section'] = ''; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- what WooCommerce does on its settings screen.
 $eo_save                    = static function ( array $changes ) {
 	$key      = Edit_Orders_For_WooCommerce_Settings::OPTION;
-	$settings = array_merge( wp_parse_args( (array) get_option( $key, array() ), Edit_Orders_For_WooCommerce_Settings::defaults() ), $changes );
+	// The values the settings page shows, as the form would post them back.
+	$settings = array_merge( Edit_Orders_For_WooCommerce_Settings::all(), $changes );
 	$post     = array();
 	foreach ( $settings as $name => $value ) {
 		if ( 'no' === $value ) {

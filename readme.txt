@@ -4,7 +4,7 @@ Tags: edit order, change order, cancel order, order editing, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1.3
 Requires PHP: 7.4
-Stable tag: 1.2.1
+Stable tag: 1.3.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -29,6 +29,8 @@ You always see a preview first: what changes, what is refunded, what the custome
 * Change the shipping or billing address, with shipping re-rated from your shipping zones and tax worked out again for the new address
 * See linked balance orders on the order screen, copy the pay link, send it again or cancel it
 * Approve or decline cancellation requests in **WPHEKA > Edit Orders**, next to a log of every change
+* See which orders customers can still change: a "Changes open, 2 h left" badge in the orders list, a "Customer can still change" view and a note on the order screen. Pack those orders once the time is up.
+* Never offer changes for chosen products or categories, such as made-to-order or final-sale items. Your own edits still work.
 
 = Customers can =
 
@@ -36,6 +38,7 @@ Within the time you allow (one hour by default), from the thank-you page, My Acc
 
 * Cancel the order, with a reason. Cancel straight away with a refund or send you a request to approve.
 * Change the delivery address, with any difference in shipping or tax shown before they confirm
+* Change the billing address (never the billing email). You choose whether customers can change the delivery address, the billing address or both.
 * Change a size or colour to another option that is in stock
 * Edit their order note
 * Say "All good, no changes needed" to close the window early
@@ -44,6 +47,7 @@ Changes stop as soon as the order ships: when it is completed, a tracking number
 
 = The money is always handled correctly =
 
+* Never changes a paid total without refunding or charging the difference.
 * A paid order's totals are never changed directly. Decreases are real WooCommerce refunds, with tax split per tax rate, so your reports stay right.
 * If your payment method can't refund automatically, the refund is still recorded with stock restored, the order is flagged "Manual refund needed" and you get an email. It never claims a refund happened when it didn't.
 * Cash on delivery: changes adjust the amount to collect instead of moving money.
@@ -108,6 +112,13 @@ The plugin does not write names, emails, phone numbers or addresses to the log. 
 
 == Changelog ==
 
+= 1.3.0 =
+* New: the orders list shows which orders customers can still change, with the time left ("Changes open, 2 h left"). A "Customer can still change" view lists only those orders. The order screen says until when. Nothing about the order changes.
+* New: never offer customer changes for chosen products or categories (WPHEKA > Edit Orders > Settings). Customers see "This order can't be changed online. Please contact us." Your own edits still work.
+* New: separate switches for customer changes to the shipping address and the billing address. Customers can now change the billing address from their order page when it is on. It is on for new stores. If you are updating, it starts off so your customers see no change until you turn it on. If you had turned address changes off, both switches stay off.
+* Improved: when a customer changes an address, the private order note shows the old and new values of the fields that changed.
+* Improved: notes for changes a customer made say so ("Order changed by the customer").
+
 = 1.2.1 =
 * Fix: on sites in a right-to-left language (such as Arabic or Hebrew) the Edit Orders page sat 20px off the edge of the window and scrolled sideways. The page now mirrors fully: switches, arrows, the save bar and the plugin row.
 * Fix: the "Customers can" option cards now show a focus ring when you reach them with the keyboard.
@@ -143,6 +154,9 @@ The plugin does not write names, emails, phone numbers or addresses to the log. 
 * First release.
 
 == Upgrade Notice ==
+
+= 1.3.0 =
+Shows which orders customers can still change, lets you exclude products and categories, and adds a billing address switch (off after the update until you turn it on).
 
 = 1.2.1 =
 Fixes the Edit Orders page on right-to-left sites and adds a keyboard focus ring to the option cards.

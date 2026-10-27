@@ -21,22 +21,29 @@ class Edit_Orders_For_WooCommerce_Settings {
 	const OPTION = 'edit_orders_for_woocommerce_settings';
 
 	/**
+	 * Option holding the first plugin version that ran on this site.
+	 */
+	const INSTALLED_OPTION = 'edit_orders_for_woocommerce_installed_version';
+
+	/**
 	 * Default settings.
 	 *
 	 * @return array
 	 */
 	public static function defaults() {
 		return array(
-			'admin_enabled'          => 'yes',
-			'editable_statuses'      => array( 'processing', 'on-hold' ),
-			'customer_enabled'       => 'yes',
-			'window_minutes'         => 60,
-			'action_cancel'          => 'yes',
-			'action_address'         => 'yes',
-			'action_note'            => 'yes',
-			'action_swap'            => 'yes',
-			'cancel_mode'            => 'approval',
-			'cancel_reasons'         => implode(
+			'admin_enabled'           => 'yes',
+			'editable_statuses'       => array( 'processing', 'on-hold' ),
+			'customer_enabled'        => 'yes',
+			'window_minutes'          => 60,
+			'action_cancel'           => 'yes',
+			'action_address'          => 'yes',
+			'action_address_shipping' => 'yes',
+			'action_address_billing'  => 'yes',
+			'action_note'             => 'yes',
+			'action_swap'             => 'yes',
+			'cancel_mode'             => 'approval',
+			'cancel_reasons'          => implode(
 				"\n",
 				array(
 					__( 'Ordered by mistake', 'wpheka-edit-orders-for-woocommerce' ),
@@ -45,10 +52,12 @@ class Edit_Orders_For_WooCommerce_Settings {
 					__( 'Need to change the order', 'wpheka-edit-orders-for-woocommerce' ),
 				)
 			),
-			'cancel_reason_required' => 'no',
-			'cancel_policy'          => '',
-			'note_max_length'        => 500,
-			'debug_log'              => 'no',
+			'cancel_reason_required'  => 'no',
+			'cancel_policy'           => '',
+			'note_max_length'         => 500,
+			'excluded_products'       => array(),
+			'excluded_categories'     => array(),
+			'debug_log'               => 'no',
 		);
 	}
 
@@ -59,7 +68,7 @@ class Edit_Orders_For_WooCommerce_Settings {
 	 * @return mixed
 	 */
 	public static function get( $key ) {
-		$settings = wp_parse_args( (array) get_option( self::OPTION, array() ), self::defaults() );
+		$settings = self::all();
 
 		/**
 		 * Filter a setting.
@@ -70,6 +79,55 @@ class Edit_Orders_For_WooCommerce_Settings {
 		 * @param string $key   Setting key.
 		 */
 		return apply_filters( 'edit_orders_for_woocommerce_setting', isset( $settings[ $key ] ) ? $settings[ $key ] : null, $key );
+	}
+
+	/**
+	 * Every setting with defaults filled in.
+	 *
+	 * Before 1.3.0 one setting, `action_address`, covered every address change. The two
+	 * switches that replaced it start from its saved value, so a store that had turned
+	 * address changes off keeps them off after the update. `action_address` itself now
+	 * reads as on when either switch is on, for code that still asks for it.
+	 *
+	 * Customers could only change the shipping address before 1.3.0, so a store that
+	 * ran an earlier version keeps billing changes off until it turns them on.
+	 *
+	 * @return array
+	 */
+	public static function all() {
+		$stored = (array) get_option( self::OPTION, array() );
+
+		if ( ! isset( $stored['action_address_billing'] ) && version_compare( (string) get_option( self::INSTALLED_OPTION, EDIT_ORDERS_FOR_WOOCOMMERCE_VERSION ), '1.3.0', '<' ) ) {
+			$stored['action_address_billing'] = 'no';
+		}
+
+		foreach ( array( 'action_address_shipping', 'action_address_billing' ) as $key ) {
+			if ( ! isset( $stored[ $key ] ) && isset( $stored['action_address'] ) ) {
+				$stored[ $key ] = $stored['action_address'];
+			}
+		}
+
+		$settings                   = wp_parse_args( $stored, self::defaults() );
+		$settings['action_address'] = 'yes' === $settings['action_address_shipping'] || 'yes' === $settings['action_address_billing'] ? 'yes' : 'no';
+
+		return $settings;
+	}
+
+	/**
+	 * Remember the first version that ran on this site, once.
+	 *
+	 * Every release before 1.3.0 created the audit log table on its first run, so a site
+	 * with the table's version option but without this one ran an earlier release.
+	 *
+	 * @return void
+	 */
+	public static function remember_installed_version() {
+		if ( false !== get_option( self::INSTALLED_OPTION ) ) {
+			return;
+		}
+
+		$earlier = false !== get_option( Edit_Orders_For_WooCommerce_Audit_Log::DB_VERSION_OPTION );
+		add_option( self::INSTALLED_OPTION, $earlier ? '1.2.1' : EDIT_ORDERS_FOR_WOOCOMMERCE_VERSION );
 	}
 
 	/**
@@ -102,5 +160,32 @@ class Edit_Orders_For_WooCommerce_Settings {
 		$reasons = array_filter( array_map( 'trim', explode( "\n", (string) self::get( 'cancel_reasons' ) ) ) );
 
 		return array_values( $reasons );
+	}
+
+	/**
+	 * Product IDs customers can never change orders for.
+	 *
+	 * @return int[]
+	 */
+	public static function excluded_products() {
+		return array_values( array_filter( array_map( 'absint', (array) self::get( 'excluded_products' ) ) ) );
+	}
+
+	/**
+	 * Category IDs customers can never change orders for, with their child categories.
+	 *
+	 * @return int[]
+	 */
+	public static function excluded_categories() {
+		$categories = array_values( array_filter( array_map( 'absint', (array) self::get( 'excluded_categories' ) ) ) );
+
+		foreach ( $categories as $category ) {
+			$children = get_term_children( $category, 'product_cat' );
+			if ( is_array( $children ) ) {
+				$categories = array_merge( $categories, array_map( 'absint', $children ) );
+			}
+		}
+
+		return array_values( array_unique( $categories ) );
 	}
 }

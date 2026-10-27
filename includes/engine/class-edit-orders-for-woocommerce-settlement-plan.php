@@ -98,6 +98,20 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 	private $address_update = array();
 
 	/**
+	 * Address changes as old and new values, for the order note (customer changes).
+	 *
+	 * @var array[]
+	 */
+	private $address_notes = array();
+
+	/**
+	 * Who made the change: staff, customer or guest.
+	 *
+	 * @var string
+	 */
+	private $actor = 'staff';
+
+	/**
 	 * Human-readable description of each change, for notes and the preview.
 	 *
 	 * @var string[]
@@ -514,6 +528,7 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 		$this->refund_lines   = $result['refund_lines'];
 		$this->balance_items  = $result['balance_items'];
 		$this->address_update = $result['address_update'];
+		$this->address_notes  = isset( $result['from_to'] ) ? $result['from_to'] : array();
 		$this->descriptions   = array_merge( $this->descriptions, $result['descriptions'] );
 	}
 
@@ -524,6 +539,33 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 	 */
 	public function get_address_update() {
 		return $this->address_update;
+	}
+
+	/**
+	 * Address changes as old and new values.
+	 *
+	 * @return array[] Each { type, from, to, description }.
+	 */
+	public function get_address_notes() {
+		return $this->address_notes;
+	}
+
+	/**
+	 * Who made the change.
+	 *
+	 * @return string staff, customer or guest.
+	 */
+	public function get_actor() {
+		return $this->actor;
+	}
+
+	/**
+	 * Record who made the change.
+	 *
+	 * @param string $actor staff, customer or guest.
+	 */
+	public function set_actor( $actor ) {
+		$this->actor = in_array( $actor, array( 'staff', 'customer', 'guest' ), true ) ? $actor : 'staff';
 	}
 
 	/**
@@ -680,6 +722,8 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 			'balance_repoints' => $this->balance_repoints,
 			'address_update'   => $this->address_update,
 			'descriptions'     => $this->descriptions,
+			'address_notes'    => $this->address_notes,
+			'actor'            => $this->actor,
 			'refunded'         => $this->refunded_at_build,
 			'lines'            => $this->lines_at_build,
 		);
@@ -693,7 +737,7 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 	 */
 	public function fingerprint() {
 		$data = $this->to_array();
-		unset( $data['descriptions'] );
+		unset( $data['descriptions'], $data['address_notes'], $data['actor'] );
 
 		return substr( md5( (string) wp_json_encode( $data ) ), 0, 12 );
 	}
@@ -911,6 +955,9 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 		$plan->repoints                  = isset( $data['repoints'] ) ? (array) $data['repoints'] : array();
 		$plan->address_update            = isset( $data['address_update'] ) ? (array) $data['address_update'] : array();
 		$plan->descriptions              = isset( $data['descriptions'] ) ? (array) $data['descriptions'] : array();
+		// Plans stored before 1.3.0 have neither: their note is the one they always had.
+		$plan->address_notes = isset( $data['address_notes'] ) ? (array) $data['address_notes'] : array();
+		$plan->set_actor( isset( $data['actor'] ) ? (string) $data['actor'] : 'staff' );
 		// Plans stored before this was recorded skip the "refunded since" check.
 		$plan->refunded_at_build = isset( $data['refunded'] ) ? (float) $data['refunded'] : null;
 		$plan->lines_at_build    = isset( $data['lines'] ) ? (array) $data['lines'] : null;

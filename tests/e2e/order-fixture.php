@@ -8,6 +8,11 @@
  * Clean:  wp eval-file .../order-fixture.php clean <id> [<id> ...]
  * Free shipping: wp eval-file .../order-fixture.php free-shipping on|off
  *   "on" leaves Alberta's zone with only free shipping; "off" restores its flat rate.
+ * Close:  wp eval-file .../order-fixture.php close <id> (closes the customer's window).
+ * Settings: wp eval-file .../order-fixture.php settings-backup | settings-restore
+ * Billing:  wp eval-file .../order-fixture.php billing-on (customers may change the
+ *   billing address; it starts off on a store updated from 1.2.x).
+ * HPOS:   wp eval-file .../order-fixture.php hpos (prints HPOS=on or HPOS=off).
  *
  * @package Edit_Orders_For_WooCommerce
  */
@@ -116,4 +121,33 @@ if ( 'create' === $eo_command ) {
 	}
 	WC_Cache_Helper::get_transient_version( 'shipping', true );
 	WP_CLI::log( 'FREE_SHIPPING=' . ( $eo_on ? 'on' : 'off' ) );
+} elseif ( 'close' === $eo_command ) {
+	// Close the customer's window, as "All good, no changes needed" does.
+	$eo_order = wc_get_order( isset( $args[1] ) ? (int) $args[1] : 0 );
+	if ( $eo_order ) {
+		$eo_order->update_meta_data( Edit_Orders_For_WooCommerce_Customer_Rules::WINDOW_CLOSED_META, time() );
+		$eo_order->save();
+		WP_CLI::log( 'CLOSED=' . $eo_order->get_id() );
+	}
+} elseif ( 'settings-backup' === $eo_command ) {
+	// Keep the settings as they are, to put back after a browser test changes them.
+	update_option( 'edit_orders_e2e_settings_backup', array( 'value' => get_option( Edit_Orders_For_WooCommerce_Settings::OPTION, null ) ), false );
+	WP_CLI::log( 'SETTINGS=saved' );
+} elseif ( 'settings-restore' === $eo_command ) {
+	$eo_backup = get_option( 'edit_orders_e2e_settings_backup', null );
+	if ( is_array( $eo_backup ) ) {
+		if ( null === $eo_backup['value'] ) {
+			delete_option( Edit_Orders_For_WooCommerce_Settings::OPTION );
+		} else {
+			update_option( Edit_Orders_For_WooCommerce_Settings::OPTION, $eo_backup['value'] );
+		}
+		delete_option( 'edit_orders_e2e_settings_backup' );
+	}
+	WP_CLI::log( 'SETTINGS=restored' );
+} elseif ( 'billing-on' === $eo_command ) {
+	update_option( Edit_Orders_For_WooCommerce_Settings::OPTION, array_merge( (array) get_option( Edit_Orders_For_WooCommerce_Settings::OPTION, array() ), array( 'action_address_billing' => 'yes' ) ) );
+	WP_CLI::log( 'BILLING=on' );
+} elseif ( 'hpos' === $eo_command ) {
+	// Prints whether HPOS is on, for a test that switches it.
+	WP_CLI::log( 'HPOS=' . ( \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled() ? 'on' : 'off' ) );
 }

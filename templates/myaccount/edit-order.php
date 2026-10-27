@@ -10,6 +10,8 @@
  * @var string     $order_key       Order key for guests, empty for account holders.
  * @var string[]   $actions         Actions available now: cancel, address, swap, note.
  * @var int        $seconds_left    Seconds left in the window.
+ * @var bool       $excluded        The order holds a product the store never offers changes for.
+ * @var string[]   $address_types   Addresses the customer may change: shipping, billing.
  * @var bool       $cancel_pending  A cancellation request is waiting for the store.
  * @var string     $cancel_mode     instant or approval.
  * @var string     $refund_method   How a cancel refunds: gateway, on_delivery or store.
@@ -103,6 +105,10 @@ $edit_orders_for_woocommerce_currency = array( 'currency' => $order->get_currenc
 		</div>
 	<?php endif; ?>
 
+	<?php if ( $excluded ) : ?>
+		<p class="woocommerce-info eofw-excluded"><?php echo esc_html( Edit_Orders_For_WooCommerce_Customer_Rules::excluded_message() ); ?></p>
+	<?php endif; ?>
+
 	<?php if ( $actions ) : ?>
 		<p class="eofw-window">
 			<?php
@@ -139,47 +145,68 @@ $edit_orders_for_woocommerce_currency = array( 'currency' => $order->get_currenc
 		<?php endif; ?>
 
 		<?php if ( in_array( 'address', $actions, true ) ) : ?>
-			<details class="eofw-action">
-				<summary><?php esc_html_e( 'Change the delivery address', 'wpheka-edit-orders-for-woocommerce' ); ?></summary>
-				<form method="post" class="eofw-address">
-					<?php echo wp_kses( Edit_Orders_For_WooCommerce_Frontend::form_fields( $order, $order_key, 'address' ), Edit_Orders_For_WooCommerce_Frontend::FORM_HTML ); ?>
-					<?php
-					$edit_orders_for_woocommerce_address   = $order->get_address( 'shipping' );
-					$edit_orders_for_woocommerce_countries = WC()->countries->get_shipping_countries();
-					$edit_orders_for_woocommerce_fields    = array(
-						'first_name' => __( 'First name', 'wpheka-edit-orders-for-woocommerce' ),
-						'last_name'  => __( 'Last name', 'wpheka-edit-orders-for-woocommerce' ),
-						'company'    => __( 'Company', 'wpheka-edit-orders-for-woocommerce' ),
-						'address_1'  => __( 'Street address', 'wpheka-edit-orders-for-woocommerce' ),
-						'address_2'  => __( 'Apartment, suite, etc.', 'wpheka-edit-orders-for-woocommerce' ),
-						'city'       => __( 'Town / City', 'wpheka-edit-orders-for-woocommerce' ),
-						'country'    => __( 'Country', 'wpheka-edit-orders-for-woocommerce' ),
-						'state'      => __( 'State / Province', 'wpheka-edit-orders-for-woocommerce' ),
-						'postcode'   => __( 'Postcode / ZIP', 'wpheka-edit-orders-for-woocommerce' ),
-					);
-					foreach ( $edit_orders_for_woocommerce_fields as $edit_orders_for_woocommerce_field => $edit_orders_for_woocommerce_label ) :
-						$edit_orders_for_woocommerce_value = isset( $edit_orders_for_woocommerce_address[ $edit_orders_for_woocommerce_field ] ) ? $edit_orders_for_woocommerce_address[ $edit_orders_for_woocommerce_field ] : '';
-						?>
-						<p>
-							<label for="eofw-shipping-<?php echo esc_attr( $edit_orders_for_woocommerce_field ); ?>"><?php echo esc_html( $edit_orders_for_woocommerce_label ); ?></label>
-							<?php if ( 'country' === $edit_orders_for_woocommerce_field ) : ?>
-								<select id="eofw-shipping-country" name="shipping[country]" class="eofw-country">
-									<?php if ( ! isset( $edit_orders_for_woocommerce_countries[ $edit_orders_for_woocommerce_value ] ) ) : ?>
-										<option value="<?php echo esc_attr( $edit_orders_for_woocommerce_value ); ?>" selected><?php echo esc_html( $edit_orders_for_woocommerce_value ); ?></option>
-									<?php endif; ?>
-									<?php foreach ( $edit_orders_for_woocommerce_countries as $edit_orders_for_woocommerce_code => $edit_orders_for_woocommerce_country ) : ?>
-										<option value="<?php echo esc_attr( $edit_orders_for_woocommerce_code ); ?>" <?php selected( $edit_orders_for_woocommerce_value, $edit_orders_for_woocommerce_code ); ?>><?php echo esc_html( $edit_orders_for_woocommerce_country ); ?></option>
-									<?php endforeach; ?>
-								</select>
-							<?php else : ?>
-								<input type="text" class="input-text" id="eofw-shipping-<?php echo esc_attr( $edit_orders_for_woocommerce_field ); ?>" name="shipping[<?php echo esc_attr( $edit_orders_for_woocommerce_field ); ?>]" value="<?php echo esc_attr( $edit_orders_for_woocommerce_value ); ?>" />
-							<?php endif; ?>
+			<?php
+			$edit_orders_for_woocommerce_fields = array(
+				'first_name' => __( 'First name', 'wpheka-edit-orders-for-woocommerce' ),
+				'last_name'  => __( 'Last name', 'wpheka-edit-orders-for-woocommerce' ),
+				'company'    => __( 'Company', 'wpheka-edit-orders-for-woocommerce' ),
+				'address_1'  => __( 'Street address', 'wpheka-edit-orders-for-woocommerce' ),
+				'address_2'  => __( 'Apartment, suite, etc.', 'wpheka-edit-orders-for-woocommerce' ),
+				'city'       => __( 'Town / City', 'wpheka-edit-orders-for-woocommerce' ),
+				'country'    => __( 'Country', 'wpheka-edit-orders-for-woocommerce' ),
+				'state'      => __( 'State / Province', 'wpheka-edit-orders-for-woocommerce' ),
+				'postcode'   => __( 'Postcode / ZIP', 'wpheka-edit-orders-for-woocommerce' ),
+				'phone'      => __( 'Phone', 'wpheka-edit-orders-for-woocommerce' ),
+			);
+			?>
+			<?php foreach ( $address_types as $edit_orders_for_woocommerce_type ) : ?>
+				<?php
+				$edit_orders_for_woocommerce_address   = $order->get_address( $edit_orders_for_woocommerce_type );
+				$edit_orders_for_woocommerce_countries = 'shipping' === $edit_orders_for_woocommerce_type ? WC()->countries->get_shipping_countries() : WC()->countries->get_allowed_countries();
+				?>
+				<details class="eofw-action eofw-action--<?php echo esc_attr( $edit_orders_for_woocommerce_type ); ?>">
+					<summary><?php echo esc_html( 'shipping' === $edit_orders_for_woocommerce_type ? __( 'Change the delivery address', 'wpheka-edit-orders-for-woocommerce' ) : __( 'Change the billing address', 'wpheka-edit-orders-for-woocommerce' ) ); ?></summary>
+					<form method="post" class="eofw-address" data-eofw-type="<?php echo esc_attr( $edit_orders_for_woocommerce_type ); ?>">
+						<?php echo wp_kses( Edit_Orders_For_WooCommerce_Frontend::form_fields( $order, $order_key, 'address' ), Edit_Orders_For_WooCommerce_Frontend::FORM_HTML ); ?>
+						<?php
+						foreach ( $edit_orders_for_woocommerce_fields as $edit_orders_for_woocommerce_field => $edit_orders_for_woocommerce_label ) :
+							// The delivery address form has never asked for a phone number; the billing one does.
+							if ( 'phone' === $edit_orders_for_woocommerce_field && 'shipping' === $edit_orders_for_woocommerce_type ) {
+								continue;
+							}
+							$edit_orders_for_woocommerce_id    = 'eofw-' . $edit_orders_for_woocommerce_type . '-' . $edit_orders_for_woocommerce_field;
+							$edit_orders_for_woocommerce_name  = $edit_orders_for_woocommerce_type . '[' . $edit_orders_for_woocommerce_field . ']';
+							$edit_orders_for_woocommerce_value = isset( $edit_orders_for_woocommerce_address[ $edit_orders_for_woocommerce_field ] ) ? $edit_orders_for_woocommerce_address[ $edit_orders_for_woocommerce_field ] : '';
+							?>
+							<p>
+								<label for="<?php echo esc_attr( $edit_orders_for_woocommerce_id ); ?>"><?php echo esc_html( $edit_orders_for_woocommerce_label ); ?></label>
+								<?php if ( 'country' === $edit_orders_for_woocommerce_field ) : ?>
+									<select id="<?php echo esc_attr( $edit_orders_for_woocommerce_id ); ?>" name="<?php echo esc_attr( $edit_orders_for_woocommerce_name ); ?>" class="eofw-country">
+										<?php if ( ! isset( $edit_orders_for_woocommerce_countries[ $edit_orders_for_woocommerce_value ] ) ) : ?>
+											<option value="<?php echo esc_attr( $edit_orders_for_woocommerce_value ); ?>" selected><?php echo esc_html( $edit_orders_for_woocommerce_value ); ?></option>
+										<?php endif; ?>
+										<?php foreach ( $edit_orders_for_woocommerce_countries as $edit_orders_for_woocommerce_code => $edit_orders_for_woocommerce_country ) : ?>
+											<option value="<?php echo esc_attr( $edit_orders_for_woocommerce_code ); ?>" <?php selected( $edit_orders_for_woocommerce_value, $edit_orders_for_woocommerce_code ); ?>><?php echo esc_html( $edit_orders_for_woocommerce_country ); ?></option>
+										<?php endforeach; ?>
+									</select>
+								<?php else : ?>
+									<input type="<?php echo esc_attr( 'phone' === $edit_orders_for_woocommerce_field ? 'tel' : 'text' ); ?>" class="input-text" id="<?php echo esc_attr( $edit_orders_for_woocommerce_id ); ?>" name="<?php echo esc_attr( $edit_orders_for_woocommerce_name ); ?>" value="<?php echo esc_attr( $edit_orders_for_woocommerce_value ); ?>" />
+								<?php endif; ?>
+							</p>
+						<?php endforeach; ?>
+						<p class="eofw-hint">
+							<?php
+							echo esc_html(
+								'shipping' === $edit_orders_for_woocommerce_type
+									? __( 'Shipping and tax are worked out again for the new address. You will see any difference before anything changes.', 'wpheka-edit-orders-for-woocommerce' )
+									: __( 'Your email address stays as it is. If tax depends on your billing address, you will see any difference before anything changes.', 'wpheka-edit-orders-for-woocommerce' )
+							);
+							?>
 						</p>
-					<?php endforeach; ?>
-					<p class="eofw-hint"><?php esc_html_e( 'Shipping and tax are worked out again for the new address. You will see any difference before anything changes.', 'wpheka-edit-orders-for-woocommerce' ); ?></p>
-					<button type="submit" class="button wp-element-button"><?php esc_html_e( 'Review the change', 'wpheka-edit-orders-for-woocommerce' ); ?></button>
-				</form>
-			</details>
+						<button type="submit" class="button wp-element-button"><?php esc_html_e( 'Review the change', 'wpheka-edit-orders-for-woocommerce' ); ?></button>
+					</form>
+				</details>
+			<?php endforeach; ?>
 		<?php endif; ?>
 
 		<?php if ( in_array( 'note', $actions, true ) ) : ?>

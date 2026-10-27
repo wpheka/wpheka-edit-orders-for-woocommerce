@@ -112,7 +112,7 @@ async function edge( page, locator, which ) {
 		await shot( customer, customer.locator( '#edit-order' ), 'screenshot-3.png' );
 
 		await customer.locator( '#edit-order summary', { hasText: 'Change the delivery address' } ).click();
-		const form = customer.locator( '#edit-order .eofw-address' );
+		const form = customer.locator( '#edit-order .eofw-address[data-eofw-type="shipping"]' );
 		await form.locator( '[name="shipping[address_1]"]' ).fill( '100 8 Ave SW' );
 		await form.locator( '[name="shipping[city]"]' ).fill( 'Calgary' );
 		await form.locator( '[name="shipping[postcode]"]' ).fill( 'T2P 1B3' );

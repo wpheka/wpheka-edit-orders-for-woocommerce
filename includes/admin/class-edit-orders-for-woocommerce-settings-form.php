@@ -41,12 +41,17 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 	const EMAIL_PREFIX = 'edit_orders_for_woocommerce_';
 
 	/**
+	 * Most products listed as chips in the product exclusion setting.
+	 */
+	const PRODUCT_CHIPS_LIMIT = 500;
+
+	/**
 	 * The keys the form saves into the settings option.
 	 *
 	 * @return string[]
 	 */
 	public static function keys() {
-		return array( 'admin_enabled', 'editable_statuses', 'customer_enabled', 'window_minutes', 'action_cancel', 'action_address', 'action_swap', 'action_note', 'note_max_length', 'cancel_mode', 'cancel_reasons', 'cancel_reason_required', 'cancel_policy', 'debug_log' );
+		return array( 'admin_enabled', 'editable_statuses', 'customer_enabled', 'window_minutes', 'action_cancel', 'action_address_shipping', 'action_address_billing', 'action_swap', 'action_note', 'note_max_length', 'excluded_products', 'excluded_categories', 'cancel_mode', 'cancel_reasons', 'cancel_reason_required', 'cancel_policy', 'debug_log' );
 	}
 
 	/**
@@ -72,7 +77,74 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 	 * @return array
 	 */
 	public static function current() {
-		return wp_parse_args( (array) get_option( Edit_Orders_For_WooCommerce_Settings::OPTION, array() ), Edit_Orders_For_WooCommerce_Settings::defaults() );
+		return Edit_Orders_For_WooCommerce_Settings::all();
+	}
+
+	/**
+	 * Product categories for the exclusion chips.
+	 *
+	 * @return array term ID => name
+	 */
+	public static function category_options() {
+		$options = array();
+		$terms   = get_terms(
+			array(
+				'taxonomy'   => 'product_cat',
+				'hide_empty' => false,
+				'orderby'    => 'name',
+			)
+		);
+		if ( is_array( $terms ) ) {
+			foreach ( $terms as $term ) {
+				$options[ (string) $term->term_id ] = $term->name;
+			}
+		}
+
+		return $options;
+	}
+
+	/**
+	 * Products for the exclusion chips: the newest ones, up to PRODUCT_CHIPS_LIMIT,
+	 * plus any product already excluded, so a large catalogue stays a light page.
+	 *
+	 * @param int[] $selected Product IDs already excluded.
+	 * @return array product ID => name
+	 */
+	public static function product_options( array $selected = array() ) {
+		$ids = get_posts(
+			array(
+				'post_type'      => 'product',
+				'post_status'    => array( 'publish', 'private' ),
+				'posts_per_page' => self::PRODUCT_CHIPS_LIMIT,
+				'orderby'        => 'date',
+				'order'          => 'DESC',
+				'fields'         => 'ids',
+				'no_found_rows'  => true,
+			)
+		);
+		$ids = array_unique( array_merge( array_map( 'absint', $selected ), array_map( 'absint', $ids ) ) );
+
+		$options = array();
+		foreach ( $ids as $id ) {
+			$product = wc_get_product( $id );
+			if ( $product && ! $product->is_type( 'variation' ) ) {
+				$options[ (string) $id ] = $product->get_name();
+			}
+		}
+		natcasesort( $options );
+
+		return $options;
+	}
+
+	/**
+	 * Is the catalogue bigger than the product chips show?
+	 *
+	 * @return bool
+	 */
+	public static function more_products_than_chips() {
+		$counts = wp_count_posts( 'product' );
+
+		return ( (int) $counts->publish + (int) $counts->private ) > self::PRODUCT_CHIPS_LIMIT;
 	}
 
 	/**
@@ -115,7 +187,7 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 
 		$input    = isset( $post[ $option ] ) && is_array( $post[ $option ] ) ? $post[ $option ] : array();
 		$settings = (array) get_option( $option, array() );
-		$yes_no   = array( 'admin_enabled', 'customer_enabled', 'action_cancel', 'action_address', 'action_swap', 'action_note', 'cancel_reason_required', 'debug_log' );
+		$yes_no   = array( 'admin_enabled', 'customer_enabled', 'action_cancel', 'action_address_shipping', 'action_address_billing', 'action_swap', 'action_note', 'cancel_reason_required', 'debug_log' );
 
 		foreach ( $yes_no as $key ) {
 			$settings[ $key ] = isset( $input[ $key ] ) && in_array( $input[ $key ], array( 'yes', '1', 1, true ), true ) ? 'yes' : 'no';
@@ -125,6 +197,30 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 		$settings['cancel_mode']     = isset( $input['cancel_mode'] ) && 'instant' === $input['cancel_mode'] ? 'instant' : 'approval';
 		$settings['cancel_reasons']  = isset( $input['cancel_reasons'] ) ? sanitize_textarea_field( (string) $input['cancel_reasons'] ) : '';
 		$settings['cancel_policy']   = isset( $input['cancel_policy'] ) ? wp_kses_post( trim( (string) $input['cancel_policy'] ) ) : '';
+
+		// The single address switch before 1.3.0 is now the two above.
+		unset( $settings['action_address'] );
+
+		// Exclusions: IDs only, of products and categories that exist.
+		$products                        = isset( $input['excluded_products'] ) ? array_filter( array_map( 'absint', (array) $input['excluded_products'] ) ) : array();
+		$settings['excluded_products']   = array_values(
+			array_filter(
+				$products,
+				static function ( $id ) {
+					return 'product' === get_post_type( $id );
+				}
+			)
+		);
+		$categories                      = isset( $input['excluded_categories'] ) ? array_filter( array_map( 'absint', (array) $input['excluded_categories'] ) ) : array();
+		$settings['excluded_categories'] = array_values(
+			array_filter(
+				$categories,
+				static function ( $id ) {
+					return (bool) term_exists( $id, 'product_cat' );
+				}
+			)
+		);
+		Edit_Orders_For_WooCommerce_Customer_Rules::reset_cache();
 
 		// Keep only the statuses offered; an empty list falls back to the defaults.
 		$statuses                      = isset( $input['editable_statuses'] ) ? array_map( 'sanitize_key', (array) $input['editable_statuses'] ) : array();
@@ -148,7 +244,8 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 			}
 		}
 
-		$after                = wp_parse_args( $settings, Edit_Orders_For_WooCommerce_Settings::defaults() );
+		$after = Edit_Orders_For_WooCommerce_Settings::all();
+		unset( $after['action_address'], $before['action_address'] );
 		$after['delete_data'] = get_option( self::DELETE_OPTION, 'no' );
 		self::log_changes( $before, $after );
 	}
@@ -254,10 +351,16 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 						'text'    => __( 'Refunded at once or after your approval, as set under Cancellations.', 'wpheka-edit-orders-for-woocommerce' ),
 					),
 					array(
-						'name'    => self::field( 'action_address' ),
-						'checked' => 'yes' === $s['action_address'],
-						'title'   => __( 'Change the delivery address', 'wpheka-edit-orders-for-woocommerce' ),
+						'name'    => self::field( 'action_address_shipping' ),
+						'checked' => 'yes' === $s['action_address_shipping'],
+						'title'   => __( 'Change the shipping address', 'wpheka-edit-orders-for-woocommerce' ),
 						'text'    => __( 'Shipping and tax are recalculated for the new address.', 'wpheka-edit-orders-for-woocommerce' ),
+					),
+					array(
+						'name'    => self::field( 'action_address_billing' ),
+						'checked' => 'yes' === $s['action_address_billing'],
+						'title'   => __( 'Change the billing address', 'wpheka-edit-orders-for-woocommerce' ),
+						'text'    => __( 'The billing email never changes. Tax is recalculated when it depends on the billing address.', 'wpheka-edit-orders-for-woocommerce' ),
 					),
 					array(
 						'name'    => self::field( 'action_swap' ),
@@ -283,6 +386,29 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 				'unit'  => __( 'characters', 'wpheka-edit-orders-for-woocommerce' ),
 				'min'   => 20,
 				'max'   => 2000,
+			)
+		);
+		Fields::chips_row(
+			array(
+				'name'     => self::field( 'excluded_products' ),
+				'options'  => self::product_options( (array) $s['excluded_products'] ),
+				'selected' => array_map( 'strval', (array) $s['excluded_products'] ),
+				'label'    => __( 'Never offer changes for these products', 'wpheka-edit-orders-for-woocommerce' ),
+				'help'     => self::more_products_than_chips()
+					/* translators: %d: number of products listed. */
+					? sprintf( __( 'Customers can\'t change or cancel an order that has one of these products. For example made-to-order or final-sale items. Your %d newest products are listed. Exclude a category to cover more.', 'wpheka-edit-orders-for-woocommerce' ), self::PRODUCT_CHIPS_LIMIT )
+					: __( 'Customers can\'t change or cancel an order that has one of these products. For example made-to-order or final-sale items.', 'wpheka-edit-orders-for-woocommerce' ),
+				'search'   => __( 'Find a product', 'wpheka-edit-orders-for-woocommerce' ),
+			)
+		);
+		Fields::chips_row(
+			array(
+				'name'     => self::field( 'excluded_categories' ),
+				'options'  => self::category_options(),
+				'selected' => array_map( 'strval', (array) $s['excluded_categories'] ),
+				'label'    => __( 'Never offer changes for these categories', 'wpheka-edit-orders-for-woocommerce' ),
+				'help'     => __( 'The same for any product in these categories or their subcategories. Your own edits in the admin are not affected.', 'wpheka-edit-orders-for-woocommerce' ),
+				'search'   => __( 'Find a category', 'wpheka-edit-orders-for-woocommerce' ),
 			)
 		);
 		Fields::sub_end();

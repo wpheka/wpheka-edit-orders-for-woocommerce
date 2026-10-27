@@ -59,7 +59,7 @@ $eo_check( 'the old tab says the settings moved and links to the new page', fals
 ob_start();
 Edit_Orders_For_WooCommerce_Settings_Form::render();
 $eo_html    = ob_get_clean();
-$eo_want    = array( 'admin_enabled', 'editable_statuses', 'customer_enabled', 'window_minutes', 'action_cancel', 'action_address', 'action_swap', 'action_note', 'cancel_mode', 'cancel_reasons', 'cancel_reason_required', 'cancel_policy', 'note_max_length', 'debug_log' );
+$eo_want    = array( 'admin_enabled', 'editable_statuses', 'customer_enabled', 'window_minutes', 'action_cancel', 'action_address_shipping', 'action_address_billing', 'action_swap', 'action_note', 'cancel_mode', 'cancel_reasons', 'cancel_reason_required', 'cancel_policy', 'note_max_length', 'excluded_products', 'excluded_categories', 'debug_log' );
 $eo_missing = array();
 foreach ( $eo_want as $eo_key ) {
 	if ( false === strpos( $eo_html, 'name="' . Edit_Orders_For_WooCommerce_Settings::OPTION . '[' . $eo_key . ']' ) ) {

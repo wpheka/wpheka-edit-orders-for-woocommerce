@@ -53,6 +53,7 @@ class Edit_Orders_For_WooCommerce_Address_Change {
 		$new_billing  = $old_billing;
 		$new_shipping = $old_shipping;
 		$descriptions = array();
+		$from_to      = array();
 
 		foreach ( array( 'billing', 'shipping' ) as $type ) {
 			if ( empty( $change[ $type ] ) ) {
@@ -69,7 +70,17 @@ class Edit_Orders_For_WooCommerce_Address_Change {
 				$new_shipping = $merged;
 			}
 			/* translators: 1: address type, 2: place. */
-			$descriptions[] = sprintf( __( '%1$s address changed to %2$s.', 'wpheka-edit-orders-for-woocommerce' ), 'billing' === $type ? __( 'Billing', 'wpheka-edit-orders-for-woocommerce' ) : __( 'Shipping', 'wpheka-edit-orders-for-woocommerce' ), self::describe( $merged ) );
+			$description    = sprintf( __( '%1$s address changed to %2$s.', 'wpheka-edit-orders-for-woocommerce' ), 'billing' === $type ? __( 'Billing', 'wpheka-edit-orders-for-woocommerce' ) : __( 'Shipping', 'wpheka-edit-orders-for-woocommerce' ), self::describe( $merged ) );
+			$descriptions[] = $description;
+			$changed        = self::changed_parts( 'billing' === $type ? $old_billing : $old_shipping, $merged );
+			if ( $changed ) {
+				$from_to[] = array(
+					'type'        => $type,
+					'from'        => $changed['from'],
+					'to'          => $changed['to'],
+					'description' => $description,
+				);
+			}
 		}
 
 		$old_location = self::tax_location( $order, $old_billing, $old_shipping );
@@ -267,7 +278,57 @@ class Edit_Orders_For_WooCommerce_Address_Change {
 			'balance_items'  => $balance_items,
 			'address_update' => $address_update,
 			'descriptions'   => $descriptions,
+			'from_to'        => $from_to,
 		);
+	}
+
+	/**
+	 * The fields that differ between two addresses, as plain text on each side:
+	 * name, company, street, "city state postcode", country and phone, in that order.
+	 * A field that was empty on one side reads "none".
+	 *
+	 * @param array $before Address before.
+	 * @param array $after  Address after.
+	 * @return array|null { from, to }, or null when nothing differs.
+	 */
+	public static function changed_parts( array $before, array $after ) {
+		$value  = static function ( array $address, $field ) {
+			return isset( $address[ $field ] ) ? trim( (string) $address[ $field ] ) : '';
+		};
+		$groups = array(
+			array( 'first_name', 'last_name' ),
+			array( 'company' ),
+			array( 'address_1' ),
+			array( 'address_2' ),
+			array( 'city', 'state', 'postcode' ),
+			array( 'country' ),
+			array( 'phone' ),
+		);
+
+		$from = array();
+		$to   = array();
+		foreach ( $groups as $fields ) {
+			$was = array();
+			$now = array();
+			foreach ( $fields as $field ) {
+				if ( $value( $before, $field ) !== $value( $after, $field ) ) {
+					$was[] = $value( $before, $field );
+					$now[] = $value( $after, $field );
+				}
+			}
+			if ( ! $was ) {
+				continue;
+			}
+			$was    = trim( implode( ' ', array_filter( $was, 'strlen' ) ) );
+			$now    = trim( implode( ' ', array_filter( $now, 'strlen' ) ) );
+			$from[] = '' !== $was ? $was : __( 'none', 'wpheka-edit-orders-for-woocommerce' );
+			$to[]   = '' !== $now ? $now : __( 'none', 'wpheka-edit-orders-for-woocommerce' );
+		}
+
+		return $from ? array(
+			'from' => implode( ', ', $from ),
+			'to'   => implode( ', ', $to ),
+		) : null;
 	}
 
 	/**

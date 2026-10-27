@@ -496,13 +496,16 @@ $eo_check( 'Completed: refused', is_wp_error( Edit_Orders_For_WooCommerce_Custom
 
 // ---------------------------------------------------------------------------
 WP_CLI::log( 'Panel, email link and My Account action' );
+// Billing changes start off on a store updated from 1.2.x, so turn them on here.
+$eo_set( array( 'action_address_billing' => 'yes' ) );
 wp_set_current_user( 0 );
 $eo_guest = $eo_make_order( array( array( 'EO-HOODIE-S', 1 ) ), 0 );
 $eo_args  = Edit_Orders_For_WooCommerce_Frontend::panel_args( $eo_guest, $eo_guest->get_order_key() );
 ob_start();
 wc_get_template( 'myaccount/edit-order.php', $eo_args, 'edit-orders-for-woocommerce/', EDIT_ORDERS_FOR_WOOCOMMERCE_PATH . 'templates/' );
 $eo_panel = ob_get_clean();
-$eo_check( 'guest panel: all four actions, the countdown and the key in every form', false !== strpos( $eo_panel, 'id="edit-order"' ) && false !== strpos( $eo_panel, 'data-eofw-seconds' ) && 5 === substr_count( $eo_panel, 'value="' . $eo_guest->get_order_key() . '"' ) && false !== strpos( $eo_panel, 'name="swap[' ) && false !== strpos( $eo_panel, 'name="shipping[city]"' ) && false !== strpos( $eo_panel, 'name="customer_note"' ) && false !== strpos( $eo_panel, 'Ask to cancel' ) );
+// Six forms since 1.3.0: done, swap, delivery address, billing address, note and cancel.
+$eo_check( 'guest panel: all four actions, the countdown and the key in every form', false !== strpos( $eo_panel, 'id="edit-order"' ) && false !== strpos( $eo_panel, 'data-eofw-seconds' ) && 6 === substr_count( $eo_panel, 'value="' . $eo_guest->get_order_key() . '"' ) && false !== strpos( $eo_panel, 'name="swap[' ) && false !== strpos( $eo_panel, 'name="shipping[city]"' ) && false !== strpos( $eo_panel, 'name="billing[city]"' ) && false !== strpos( $eo_panel, 'name="customer_note"' ) && false !== strpos( $eo_panel, 'Ask to cancel' ) );
 $eo_email = WC()->mailer()->get_emails()['WC_Email_Customer_Processing_Order'];
 ob_start();
 Edit_Orders_For_WooCommerce_Frontend::email_link( $eo_guest, false, false, $eo_email );

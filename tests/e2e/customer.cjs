@@ -130,7 +130,7 @@ function check( label, condition, detail ) {
 		await myPanel.locator( '[name="shipping[city]"]' ).fill( 'Calgary' );
 		await myPanel.locator( '[name="shipping[postcode]"]' ).fill( 'T2P 1B3' );
 		await myPanel.locator( 'select[name="shipping[state]"]' ).selectOption( 'AB' );
-		await Promise.all( [ page.waitForNavigation(), myPanel.locator( '.eofw-address button[type="submit"]' ).click() ] );
+		await Promise.all( [ page.waitForNavigation(), myPanel.locator( '.eofw-address[data-eofw-type="shipping"] button[type="submit"]' ).click() ] );
 		const preview = await page.locator( '.eofw-preview' ).textContent();
 		check( 'preview: $12.00 more, $3.90 refunded once paid', /12\.00/.test( preview ) && /3\.90/.test( preview ), preview.replace( /\s+/g, ' ' ).trim() );
 		check( 'the confirm box shows no form fields (the previewed values ride along hidden)', await page.locator( '.eofw-confirm select, .eofw-confirm textarea, .eofw-confirm input:not([type="hidden"])' ).count() === 0 );

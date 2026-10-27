@@ -401,7 +401,8 @@ class Edit_Orders_For_WooCommerce_Frontend {
 	private static function address_changes( WC_Order $order, array $data ) {
 		$change = array( 'type' => 'address' );
 
-		foreach ( array( 'shipping', 'billing' ) as $type ) {
+		// Only the addresses the store lets customers change; anything else posted is ignored.
+		foreach ( self::address_types() as $type ) {
 			if ( empty( $data[ $type ] ) || ! is_array( $data[ $type ] ) ) {
 				continue;
 			}
@@ -530,16 +531,19 @@ class Edit_Orders_For_WooCommerce_Frontend {
 			delete_transient( 'eofw_msg_' . $token );
 		}
 
-		$actions = array();
-		foreach ( Edit_Orders_For_WooCommerce_Customer_Rules::enabled_actions() as $action ) {
-			if ( true === Edit_Orders_For_WooCommerce_Customer_Rules::can( $order, $action, '' !== $key ? 'guest' : 'customer' ) ) {
-				$actions[] = $action;
-			}
+		$actor   = '' !== $key ? 'guest' : 'customer';
+		$actions = Edit_Orders_For_WooCommerce_Customer_Rules::open_actions( $order, $actor );
+
+		// Changes would be open, but the order holds an excluded product: say so plainly.
+		$excluded = false;
+		if ( ! $actions ) {
+			$why      = Edit_Orders_For_WooCommerce_Customer_Rules::can( $order, 'close', $actor );
+			$excluded = is_wp_error( $why ) && Edit_Orders_For_WooCommerce_Customer_Rules::EXCLUDED === $why->get_error_code();
 		}
 
 		$pending = 'pending' === $order->get_meta( Edit_Orders_For_WooCommerce_Cancellation::STATUS_META );
 
-		if ( ! $actions && ! $state && '' === $message && ! $pending ) {
+		if ( ! $actions && ! $state && '' === $message && ! $pending && ! $excluded ) {
 			return null;
 		}
 
@@ -548,6 +552,8 @@ class Edit_Orders_For_WooCommerce_Frontend {
 			'order_key'       => $key,
 			'actions'         => $actions,
 			'seconds_left'    => Edit_Orders_For_WooCommerce_Customer_Rules::seconds_left( $order ),
+			'excluded'        => $excluded,
+			'address_types'   => self::address_types(),
 			'cancel_pending'  => $pending,
 			'cancel_mode'     => Edit_Orders_For_WooCommerce_Settings::get( 'cancel_mode' ),
 			'refund_method'   => self::refund_method( $order ),
@@ -610,6 +616,22 @@ class Edit_Orders_For_WooCommerce_Frontend {
 	}
 
 	/**
+	 * The addresses customers may change, as set in the settings.
+	 *
+	 * @return string[] Any of shipping, billing.
+	 */
+	public static function address_types() {
+		$types = array();
+		foreach ( array( 'shipping', 'billing' ) as $type ) {
+			if ( Edit_Orders_For_WooCommerce_Settings::is_on( 'action_address_' . $type ) ) {
+				$types[] = $type;
+			}
+		}
+
+		return $types;
+	}
+
+	/**
 	 * "Change or cancel" in the My Account orders list.
 	 *
 	 * @param array    $actions Actions.
@@ -617,14 +639,11 @@ class Edit_Orders_For_WooCommerce_Frontend {
 	 * @return array
 	 */
 	public static function order_action( $actions, $order ) {
-		foreach ( Edit_Orders_For_WooCommerce_Customer_Rules::enabled_actions() as $action ) {
-			if ( true === Edit_Orders_For_WooCommerce_Customer_Rules::can( $order, $action ) ) {
-				$actions['edit_order'] = array(
-					'url'  => $order->get_view_order_url() . '#edit-order',
-					'name' => __( 'Change or cancel', 'wpheka-edit-orders-for-woocommerce' ),
-				);
-				break;
-			}
+		if ( $order instanceof WC_Order && Edit_Orders_For_WooCommerce_Customer_Rules::open_actions( $order ) ) {
+			$actions['edit_order'] = array(
+				'url'  => $order->get_view_order_url() . '#edit-order',
+				'name' => __( 'Change or cancel', 'wpheka-edit-orders-for-woocommerce' ),
+			);
 		}
 
 		return $actions;
@@ -643,14 +662,7 @@ class Edit_Orders_For_WooCommerce_Frontend {
 			return;
 		}
 
-		$available = false;
-		foreach ( Edit_Orders_For_WooCommerce_Customer_Rules::enabled_actions() as $action ) {
-			if ( true === Edit_Orders_For_WooCommerce_Customer_Rules::can( $order, $action ) ) {
-				$available = true;
-				break;
-			}
-		}
-		if ( ! $available ) {
+		if ( ! Edit_Orders_For_WooCommerce_Customer_Rules::open_actions( $order ) ) {
 			return;
 		}
 

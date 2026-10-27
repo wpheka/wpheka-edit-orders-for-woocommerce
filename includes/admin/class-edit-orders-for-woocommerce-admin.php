@@ -138,6 +138,10 @@ class Edit_Orders_For_WooCommerce_Admin {
 			return;
 		}
 
+		if ( class_exists( 'Edit_Orders_For_WooCommerce_Orders_List' ) ) {
+			echo wp_kses_post( Edit_Orders_For_WooCommerce_Orders_List::order_screen_note( $order ) );
+		}
+
 		$manual = $order->get_meta( Edit_Orders_For_WooCommerce_Refunds::MANUAL_REFUND_META );
 		if ( $manual ) {
 			echo '<p class="edit-orders-manual-refund"><strong>';

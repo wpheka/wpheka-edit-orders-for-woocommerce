@@ -16,6 +16,11 @@ defined( 'ABSPATH' ) || exit;
 final class Edit_Orders_For_WooCommerce {
 
 	/**
+	 * Transient where the Orders screen keeps the orders customers can still change.
+	 */
+	const OPEN_ORDERS_CACHE = 'edit_orders_for_woocommerce_open_ids';
+
+	/**
 	 * The single instance of the class.
 	 *
 	 * @var Edit_Orders_For_WooCommerce|null
@@ -72,6 +77,7 @@ final class Edit_Orders_For_WooCommerce {
 		if ( is_admin() ) {
 			require_once EDIT_ORDERS_FOR_WOOCOMMERCE_PATH . 'includes/admin/class-edit-orders-for-woocommerce-admin.php';
 			require_once EDIT_ORDERS_FOR_WOOCOMMERCE_PATH . 'includes/admin/class-edit-orders-for-woocommerce-activity.php';
+			require_once EDIT_ORDERS_FOR_WOOCOMMERCE_PATH . 'includes/admin/class-edit-orders-for-woocommerce-orders-list.php';
 			require_once EDIT_ORDERS_FOR_WOOCOMMERCE_PATH . 'includes/wpheka-ui/load.php';
 			require_once EDIT_ORDERS_FOR_WOOCOMMERCE_PATH . 'includes/admin/class-edit-orders-for-woocommerce-settings-form.php';
 			require_once EDIT_ORDERS_FOR_WOOCOMMERCE_PATH . 'includes/admin/class-edit-orders-for-woocommerce-admin-page.php';
@@ -85,17 +91,33 @@ final class Edit_Orders_For_WooCommerce {
 	 * @return void
 	 */
 	private function init_hooks() {
+		Edit_Orders_For_WooCommerce_Settings::remember_installed_version();
 		Edit_Orders_For_WooCommerce_Balance_Orders::init();
 		Edit_Orders_For_WooCommerce_Audit_Log::init();
 		Edit_Orders_For_WooCommerce_Emails::init();
 		Edit_Orders_For_WooCommerce_Frontend::init();
 
+		// An order paid, moved on or changed can join or leave the Orders screen's view.
+		foreach ( array( 'woocommerce_payment_complete', 'woocommerce_order_status_changed', 'edit_orders_for_woocommerce_after_apply', 'edit_orders_for_woocommerce_window_closed', 'edit_orders_for_woocommerce_cancel_requested' ) as $hook ) {
+			add_action( $hook, array( __CLASS__, 'forget_open_orders' ) );
+		}
+
 		if ( is_admin() ) {
 			Edit_Orders_For_WooCommerce_Admin::init();
 			Edit_Orders_For_WooCommerce_Activity::init();
+			Edit_Orders_For_WooCommerce_Orders_List::init();
 			Edit_Orders_For_WooCommerce_Admin_Page::init();
 			Edit_Orders_For_WooCommerce_System_Status::init();
 		}
+	}
+
+	/**
+	 * Drop the Orders screen's cached list of orders customers can still change.
+	 *
+	 * @return void
+	 */
+	public static function forget_open_orders() {
+		delete_transient( self::OPEN_ORDERS_CACHE );
 	}
 
 	/**

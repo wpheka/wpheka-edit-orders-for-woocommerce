@@ -36,6 +36,18 @@ class Edit_Orders_For_WooCommerce_Customer_Rules {
 	const MAX_ACTIONS = 20;
 
 	/**
+	 * Error code when an order holds a product the store excluded from customer changes.
+	 */
+	const EXCLUDED = 'edit_orders_for_woocommerce_excluded';
+
+	/**
+	 * Exclusion results on this request, by order ID.
+	 *
+	 * @var bool[]
+	 */
+	private static $excluded = array();
+
+	/**
 	 * Guest orders authorised on this request, by order ID.
 	 *
 	 * @var bool[]
@@ -148,6 +160,105 @@ class Edit_Orders_For_WooCommerce_Customer_Rules {
 	}
 
 	/**
+	 * The actions a customer can use on this order right now. The My Account panel,
+	 * the orders list badge and the order email link all ask this, so they agree.
+	 *
+	 * @param WC_Order $order Order.
+	 * @param string   $actor customer or guest.
+	 * @return string[]
+	 */
+	public static function open_actions( WC_Order $order, $actor = 'customer' ) {
+		$actions = array();
+		foreach ( self::enabled_actions() as $action ) {
+			if ( true === self::can( $order, $action, $actor ) ) {
+				$actions[] = $action;
+			}
+		}
+
+		return $actions;
+	}
+
+	/**
+	 * Does the order hold a product the store never offers changes for, directly or
+	 * through its category? Staff edits are not affected. Checked only when a panel,
+	 * badge or link is shown, and remembered for the rest of the request.
+	 *
+	 * @param WC_Order $order Order.
+	 * @return bool
+	 */
+	public static function is_excluded( WC_Order $order ) {
+		$order_id = $order->get_id();
+		if ( $order_id && isset( self::$excluded[ $order_id ] ) ) {
+			return self::$excluded[ $order_id ];
+		}
+
+		$products   = Edit_Orders_For_WooCommerce_Settings::excluded_products();
+		$categories = Edit_Orders_For_WooCommerce_Settings::excluded_categories();
+		$excluded   = false;
+
+		if ( $products || $categories ) {
+			foreach ( $order->get_items() as $item ) {
+				if ( ! $item instanceof WC_Order_Item_Product ) {
+					continue;
+				}
+				$product_id = (int) $item->get_product_id();
+				if ( in_array( $product_id, $products, true ) || in_array( (int) $item->get_variation_id(), $products, true ) ) {
+					$excluded = true;
+					break;
+				}
+				if ( $categories && $product_id && array_intersect( $categories, array_map( 'absint', wc_get_product_term_ids( $product_id, 'product_cat' ) ) ) ) {
+					$excluded = true;
+					break;
+				}
+			}
+		}
+
+		/**
+		 * Whether an order is left out of customer changes.
+		 *
+		 * @since 1.3.0
+		 *
+		 * @param bool     $excluded Excluded.
+		 * @param WC_Order $order    Order.
+		 */
+		$excluded = (bool) apply_filters( 'edit_orders_for_woocommerce_order_excluded', $excluded, $order );
+
+		if ( $order_id ) {
+			self::$excluded[ $order_id ] = $excluded;
+		}
+
+		return $excluded;
+	}
+
+	/**
+	 * What a customer sees instead of the change actions on an excluded order.
+	 *
+	 * @return string
+	 */
+	public static function excluded_message() {
+		return __( 'This order can\'t be changed online. Please contact us.', 'wpheka-edit-orders-for-woocommerce' );
+	}
+
+	/**
+	 * Forget remembered exclusion results (after the settings change and in tests).
+	 */
+	public static function reset_cache() {
+		self::$excluded = array();
+	}
+
+	/**
+	 * When the window closes, as a timestamp, or 0 when it is closed already.
+	 *
+	 * @param WC_Order $order Order.
+	 * @return int
+	 */
+	public static function window_end( WC_Order $order ) {
+		$left = self::seconds_left( $order );
+
+		return $left > 0 ? time() + $left : 0;
+	}
+
+	/**
 	 * Can the customer use this action on this order now?
 	 *
 	 * @param WC_Order $order  Order.
@@ -174,6 +285,10 @@ class Edit_Orders_For_WooCommerce_Customer_Rules {
 
 		if ( 0 === self::seconds_left( $order ) ) {
 			return new WP_Error( 'edit_orders_for_woocommerce_window', __( 'The time for changing this order has passed. Contact us if you need help.', 'wpheka-edit-orders-for-woocommerce' ) );
+		}
+
+		if ( self::is_excluded( $order ) ) {
+			return new WP_Error( self::EXCLUDED, self::excluded_message() );
 		}
 
 		if ( 'cancel' === $action && 'pending' === $order->get_meta( Edit_Orders_For_WooCommerce_Cancellation::STATUS_META ) ) {

@@ -62,6 +62,7 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 		}
 
 		$plan = Edit_Orders_For_WooCommerce_Settlement_Plan::build( $order, new Edit_Orders_For_WooCommerce_Change_Set( $changes ) );
+		$plan->set_actor( $actor );
 
 		if ( $plan->get_errors() ) {
 			Edit_Orders_For_WooCommerce_Log::notice(
@@ -444,6 +445,24 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 		$balance_refunds = array();
 		$refunds_made    = array();
 		$notes           = $plan->get_descriptions();
+		$by_customer     = in_array( $plan->get_actor(), array( 'customer', 'guest' ), true );
+		$address_notes   = array();
+
+		// A customer's address change gets its own note with the old and new values.
+		if ( $by_customer ) {
+			foreach ( $plan->get_address_notes() as $address_note ) {
+				$notes           = array_values( array_diff( $notes, array( $address_note['description'] ) ) );
+				$address_notes[] = sprintf(
+					'billing' === $address_note['type']
+						/* translators: 1: old values, 2: new values. */
+						? __( 'Billing address changed by the customer: %1$s -> %2$s', 'wpheka-edit-orders-for-woocommerce' )
+						/* translators: 1: old values, 2: new values. */
+						: __( 'Shipping address changed by the customer: %1$s -> %2$s', 'wpheka-edit-orders-for-woocommerce' ),
+					$address_note['from'],
+					$address_note['to']
+				);
+			}
+		}
 
 		// Money first. The part of a line paid on a balance order is refunded from that
 		// order, through the gateway it was paid with, before the original order.
@@ -580,13 +599,24 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 			$order->update_meta_data( Edit_Orders_For_WooCommerce_Balance_Orders::APPLIED_BALANCES_META, array_values( array_unique( array_filter( array_map( 'absint', $applied ) ) ) ) );
 		}
 
-		$order->add_order_note(
-			( $balance
-				/* translators: %s: balance order number. */
-				? sprintf( __( 'Order edited (paid through balance order #%s):', 'wpheka-edit-orders-for-woocommerce' ), $balance->get_order_number() )
-				: __( 'Order edited:', 'wpheka-edit-orders-for-woocommerce' ) )
-			. ' ' . implode( ' ', $notes )
-		);
+		foreach ( $address_notes as $address_note ) {
+			$order->add_order_note( $address_note );
+		}
+		// Keep the balance order's number in a note even when the address note says the rest.
+		if ( $notes || ! $address_notes || $balance ) {
+			if ( $by_customer ) {
+				$intro = $balance
+					/* translators: %s: balance order number. */
+					? sprintf( __( 'Order changed by the customer (paid through balance order #%s):', 'wpheka-edit-orders-for-woocommerce' ), $balance->get_order_number() )
+					: __( 'Order changed by the customer:', 'wpheka-edit-orders-for-woocommerce' );
+			} else {
+				$intro = $balance
+					/* translators: %s: balance order number. */
+					? sprintf( __( 'Order edited (paid through balance order #%s):', 'wpheka-edit-orders-for-woocommerce' ), $balance->get_order_number() )
+					: __( 'Order edited:', 'wpheka-edit-orders-for-woocommerce' );
+			}
+			$order->add_order_note( $notes ? $intro . ' ' . implode( ' ', $notes ) : rtrim( $intro, ': ' ) . '.' );
+		}
 		$order->save();
 		if ( $address ) {
 			// The order's details changed: read them again before the next entry about it.

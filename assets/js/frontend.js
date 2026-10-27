@@ -86,47 +86,54 @@
 		}
 	);
 
-	// State: a list when the country has states, otherwise free text. Scoped to the
-	// address form: the confirm form repeats shipping[state] as a hidden field.
-	var country = panel.querySelector( '.eofw-address .eofw-country' );
-	if ( country ) {
-		var addressForm = country.form;
-		var syncState   = function () {
-			var current = addressForm.querySelector( '[name="shipping[state]"]' );
-			var states  = ( cfg.states && cfg.states[ country.value ] ) || null;
-			var replacement;
+	// State: a list when the country has states, otherwise free text. Scoped to each
+	// address form: the confirm form repeats the state as a hidden field.
+	Array.prototype.forEach.call(
+		panel.querySelectorAll( '.eofw-address .eofw-country' ),
+		function ( country ) {
+			var addressForm = country.form;
+			var type        = addressForm.getAttribute( 'data-eofw-type' ) || 'shipping';
+			var syncState   = function () {
+				var current = addressForm.querySelector( '[name="' + type + '[state]"]' );
+				var states  = ( cfg.states && cfg.states[ country.value ] ) || null;
+				var replacement;
 
-			if ( states && Object.keys( states ).length ) {
-				replacement   = document.createElement( 'select' );
-				var addOption = function ( value, label ) {
-					var option         = document.createElement( 'option' );
-					option.value       = value;
-					option.textContent = label;
-					replacement.appendChild( option );
-				};
-				// A blank first choice, and a stored value that isn't in the list kept
-				// as it is, so the form never changes the state by itself.
-				addOption( '', '' );
-				if ( current.value && ! states[ current.value ] ) {
-					addOption( current.value, current.value );
+				if ( ! current ) {
+					return;
 				}
-				Object.keys( states ).forEach(
-					function ( code ) {
-						addOption( code, states[ code ] );
+
+				if ( states && Object.keys( states ).length ) {
+					replacement   = document.createElement( 'select' );
+					var addOption = function ( value, label ) {
+						var option         = document.createElement( 'option' );
+						option.value       = value;
+						option.textContent = label;
+						replacement.appendChild( option );
+					};
+					// A blank first choice, and a stored value that isn't in the list kept
+					// as it is, so the form never changes the state by itself.
+					addOption( '', '' );
+					if ( current.value && ! states[ current.value ] ) {
+						addOption( current.value, current.value );
 					}
-				);
-				replacement.value = current.value || '';
-			} else {
-				replacement           = document.createElement( 'input' );
-				replacement.type      = 'text';
-				replacement.className = 'input-text';
-				replacement.value     = states ? '' : current.value;
-			}
-			replacement.name = 'shipping[state]';
-			replacement.id   = current.id;
-			current.parentNode.replaceChild( replacement, current );
-		};
-		country.addEventListener( 'change', syncState );
-		syncState();
-	}
+					Object.keys( states ).forEach(
+						function ( code ) {
+							addOption( code, states[ code ] );
+						}
+					);
+					replacement.value = current.value || '';
+				} else {
+					replacement           = document.createElement( 'input' );
+					replacement.type      = 'text';
+					replacement.className = 'input-text';
+					replacement.value     = states ? '' : current.value;
+				}
+				replacement.name = type + '[state]';
+				replacement.id   = current.id;
+				current.parentNode.replaceChild( replacement, current );
+			};
+			country.addEventListener( 'change', syncState );
+			syncState();
+		}
+	);
 }() );

@@ -86,20 +86,21 @@ try {
 // Saves as the browser posts them: every field present, unticked switches as "no".
 $eo_post = static function ( array $changes = array(), array $extra = array() ) use ( $eo_option ) {
 	$base = array(
-		'admin_enabled'          => 'yes',
-		'editable_statuses'      => array( '', 'processing', 'on-hold' ),
-		'customer_enabled'       => 'yes',
-		'window_minutes'         => '60',
-		'action_cancel'          => 'yes',
-		'action_address'         => 'yes',
-		'action_swap'            => 'yes',
-		'action_note'            => 'yes',
-		'note_max_length'        => '500',
-		'cancel_mode'            => 'approval',
-		'cancel_reasons'         => "Ordered by mistake\nFound a better price",
-		'cancel_reason_required' => 'no',
-		'cancel_policy'          => '',
-		'debug_log'              => 'no',
+		'admin_enabled'           => 'yes',
+		'editable_statuses'       => array( '', 'processing', 'on-hold' ),
+		'customer_enabled'        => 'yes',
+		'window_minutes'          => '60',
+		'action_cancel'           => 'yes',
+		'action_address_shipping' => 'yes',
+		'action_address_billing'  => 'yes',
+		'action_swap'             => 'yes',
+		'action_note'             => 'yes',
+		'note_max_length'         => '500',
+		'cancel_mode'             => 'approval',
+		'cancel_reasons'          => "Ordered by mistake\nFound a better price",
+		'cancel_reason_required'  => 'no',
+		'cancel_policy'           => '',
+		'debug_log'               => 'no',
 	);
 	Edit_Orders_For_WooCommerce_Settings_Form::save(
 		array_merge(
@@ -116,7 +117,7 @@ $eo_post = static function ( array $changes = array(), array $extra = array() ) 
 
 // ===========================================================================
 WP_CLI::log( '1. Every on/off setting saves both ways' );
-foreach ( array( 'admin_enabled', 'customer_enabled', 'action_cancel', 'action_address', 'action_swap', 'action_note', 'cancel_reason_required', 'debug_log' ) as $eo_key ) {
+foreach ( array( 'admin_enabled', 'customer_enabled', 'action_cancel', 'action_address_shipping', 'action_address_billing', 'action_swap', 'action_note', 'cancel_reason_required', 'debug_log' ) as $eo_key ) {
 	$eo_off = $eo_post( array( $eo_key => 'no' ) );
 	$eo_on  = $eo_post( array( $eo_key => 'yes' ) );
 	$eo_check( "{$eo_key}: off then on", 'no' === $eo_off[ $eo_key ] && 'yes' === $eo_on[ $eo_key ], $eo_off[ $eo_key ] . '/' . $eo_on[ $eo_key ] );
