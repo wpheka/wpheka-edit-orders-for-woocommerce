@@ -392,6 +392,59 @@ class Fields {
 	}
 
 	/**
+	 * Read-only key/value rows, for information screens.
+	 *
+	 * @param array[] $rows Each { label, value, code (monospace value), note (a second, quieter line), pill: [ text, kind ok|warn|bad|info ] }.
+	 */
+	public static function kv( array $rows ) {
+		echo '<dl class="w-kv">';
+		foreach ( $rows as $row ) {
+			$row   = wp_parse_args(
+				$row,
+				array(
+					'label' => '',
+					'value' => '',
+					'code'  => false,
+					'note'  => '',
+					'pill'  => array(),
+				)
+			);
+			$value = $row['code'] ? '<code>' . esc_html( $row['value'] ) . '</code>' : esc_html( $row['value'] );
+			echo '<div><dt>' . esc_html( $row['label'] ) . '</dt><dd>' . $value; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- escaped above.
+			if ( '' !== (string) $row['note'] ) {
+				echo '<small class="w-kv-note">' . esc_html( $row['note'] ) . '</small>';
+			}
+			echo '</dd><dd class="w-kv-state">';
+			if ( $row['pill'] ) {
+				echo '<span class="w-pill w-pill--' . esc_attr( isset( $row['pill'][1] ) ? $row['pill'][1] : 'info' ) . '">' . esc_html( $row['pill'][0] ) . '</span>';
+			}
+			echo '</dd></div>';
+		}
+		echo '</dl>';
+	}
+
+	/**
+	 * A search box that narrows the key/value rows inside one element. Sections left with
+	 * no match are hidden, and the element's kv_empty() card shows when nothing matches.
+	 *
+	 * @param string $target      Id of the element holding the rows.
+	 * @param string $placeholder Placeholder and accessible name.
+	 */
+	public static function kv_find( $target, $placeholder ) {
+		echo '<div class="w-find w-kv-find">' . Icons::get( 'search', '2' ) . '<input type="search" placeholder="' . esc_attr( $placeholder ) . '" aria-label="' . esc_attr( $placeholder ) . '" aria-controls="' . esc_attr( $target ) . '" data-w-kvfind="' . esc_attr( $target ) . '"></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- icon is static SVG.
+	}
+
+	/**
+	 * The card shown inside a kv_find() target when the search matches nothing.
+	 *
+	 * @param string $title Heading.
+	 * @param string $text  One line.
+	 */
+	public static function kv_empty( $title, $text ) {
+		echo '<div class="w-card w-empty" data-w-kv-empty hidden><span class="w-ico w-ico--lg">' . Icons::get( 'search' ) . '</span><h3>' . esc_html( $title ) . '</h3><p>' . esc_html( $text ) . '</p></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- static SVG.
+	}
+
+	/**
 	 * The "No settings match" card shown when a search finds nothing.
 	 */
 	public static function find_empty() {

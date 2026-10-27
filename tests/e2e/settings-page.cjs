@@ -76,9 +76,12 @@ async function save( page ) {
 ( async () => {
 	const browser = await chromium.launch( { channel: process.env.PW_CHANNEL || 'chrome', headless: true } );
 	const errors = [];
+	const foreign = [];
 	try {
 		const page = await ( await browser.newContext( { viewport: { width: 1440, height: 900 } } ) ).newPage();
-		page.on( 'pageerror', ( e ) => errors.push( e.message ) );
+		// Only this plugin's errors count: WordPress 7.1 admin view transitions can reject
+		// with "Page already revealed" in headless Chromium, which is core's, not ours.
+		page.on( 'pageerror', ( e ) => ( /edit-orders-for-woocommerce/.test( e.stack || '' ) ? errors : foreign ).push( e.message ) );
 		await login( page, 'admin', 'password' );
 
 		await page.goto( `${ PAGE }&tab=settings`, { waitUntil: 'networkidle' } );
@@ -140,7 +143,10 @@ async function save( page ) {
 			const sw = await page.evaluate( () => document.documentElement.scrollWidth );
 			check( `no sideways scroll at ${ width }px`, sw <= width, `${ sw }px` );
 		}
-		check( 'no script errors', 0 === errors.length, errors.join( '; ' ) );
+		check( 'no script errors from this plugin', 0 === errors.length, errors.join( '; ' ) );
+		if ( foreign.length ) {
+			console.log( `NOTE|other script errors (not this plugin): ${ foreign.join( '; ' ) }` );
+		}
 	} finally {
 		await browser.close();
 	}

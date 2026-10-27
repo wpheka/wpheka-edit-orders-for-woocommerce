@@ -197,7 +197,7 @@ class Page {
 	/**
 	 * Close the page: the plugin row, footer, save bar and toast.
 	 *
-	 * @param array $args Footer settings: slug (this plugin's wordpress.org slug, left out of the row), icons_url (with a trailing slash), short_name, review_url, form (the settings form id, when the page has one) and saved (show the "Settings saved" toast).
+	 * @param array $args Footer settings: slug (this plugin's wordpress.org slug, left out of the row), icons_url (with a trailing slash), short_name, review_url, form (the settings form id, when the page has one), saved (show the "Settings saved" toast) and error (a message saying why a save failed: shown in a red toast that stays until dismissed, and announced to screen readers; it replaces the saved toast).
 	 */
 	public static function close( array $args ) {
 		$args = wp_parse_args(
@@ -209,6 +209,7 @@ class Page {
 				'review_url' => '',
 				'form'       => '',
 				'saved'      => false,
+				'error'      => '',
 			)
 		);
 
@@ -249,6 +250,13 @@ class Page {
 			echo '<div class="w-savebar" role="region" aria-label="' . esc_attr__( 'Unsaved changes', 'wpheka-edit-orders-for-woocommerce' ) . '"><span class="w-savebar-text">' . esc_html__( 'Unsaved changes', 'wpheka-edit-orders-for-woocommerce' ) . '</span>';
 			echo '<button type="reset" form="' . esc_attr( $args['form'] ) . '" class="w-btn w-btn--ghost-inv w-btn--sm" data-w-discard>' . esc_html__( 'Discard', 'wpheka-edit-orders-for-woocommerce' ) . '</button>';
 			echo '<button type="submit" form="' . esc_attr( $args['form'] ) . '" class="w-btn w-btn--primary w-btn--sm">' . esc_html__( 'Save changes', 'wpheka-edit-orders-for-woocommerce' ) . '</button></div>';
+		}
+		if ( '' !== (string) $args['error'] ) {
+			// A failed save must never be followed by "Settings saved".
+			$args['saved'] = false;
+			echo '<div class="w-toast w-toast--error is-shown" role="alert">';
+			echo '<span class="w-toast-err">' . Icons::get( 'warn', '2' ) . '</span><span class="w-toast-msg">' . esc_html( $args['error'] ) . '</span>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- icon is static SVG.
+			echo '<button type="button" class="w-toast-close" data-w-toast-close aria-label="' . esc_attr__( 'Dismiss', 'wpheka-edit-orders-for-woocommerce' ) . '">' . Icons::get( 'xcircle', '2' ) . '</button></div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- icon is static SVG.
 		}
 		echo '<div class="w-toast' . ( $args['saved'] ? ' is-shown' : '' ) . '" role="status" aria-live="polite">';
 		if ( $args['saved'] ) {

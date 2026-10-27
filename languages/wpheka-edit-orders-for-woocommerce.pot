@@ -3,13 +3,13 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: WPHEKA Edit Orders for WooCommerce 1.3.0\n"
-"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/edit-orders-for-woocommerce\n"
+"Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/wpheka-edit-orders-for-woocommerce\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T10:09:43+01:00\n"
+"POT-Creation-Date: 2026-10-27T14:09:00+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wpheka-edit-orders-for-woocommerce\n"
@@ -267,7 +267,7 @@ msgid "Edit Orders for WooCommerce"
 msgstr ""
 
 #: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:181
-#: includes/wpheka-ui/class-page.php:227
+#: includes/wpheka-ui/class-page.php:228
 msgid "Free"
 msgstr ""
 
@@ -380,7 +380,7 @@ msgid "Advanced"
 msgstr ""
 
 #: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:311
-#: includes/wpheka-ui/class-page.php:251
+#: includes/wpheka-ui/class-page.php:252
 msgid "Save changes"
 msgstr ""
 
@@ -524,7 +524,7 @@ msgid "Preview changes"
 msgstr ""
 
 #: includes/admin/class-edit-orders-for-woocommerce-admin.php:283
-#: includes/wpheka-ui/class-page.php:250
+#: includes/wpheka-ui/class-page.php:251
 msgid "Discard"
 msgstr ""
 
@@ -755,42 +755,42 @@ msgid "Cancelled by the store; the changes waiting for it were not made."
 msgstr ""
 
 #. translators: %d: minutes.
-#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:181
+#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:202
 #, php-format
 msgid "%d min left"
 msgstr ""
 
 #. translators: %d: hours.
-#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:185
+#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:206
 #, php-format
 msgid "%d h left"
 msgstr ""
 
 #. translators: %d: days.
-#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:189
+#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:210
 #, php-format
 msgid "%d d left"
 msgstr ""
 
 #. translators: %s: time left, for example "2 h left".
-#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:217
+#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:238
 #, php-format
 msgid "Changes open, %s"
 msgstr ""
 
 #. translators: %s: time, for example 3:40 pm.
-#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:219
-#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:356
+#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:240
+#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:378
 #, php-format
 msgid "The customer can still change this order until %s."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:239
-#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:243
+#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:260
+#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:264
 msgid "Changes"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:303
+#: includes/admin/class-edit-orders-for-woocommerce-orders-list.php:324
 msgid "Customer can still change"
 msgstr ""
 
@@ -1109,19 +1109,19 @@ msgstr ""
 msgid "Orders ever flagged for a manual refund"
 msgstr ""
 
-#: includes/class-edit-orders-for-woocommerce-settings.php:44
+#: includes/class-edit-orders-for-woocommerce-settings.php:49
 msgid "Ordered by mistake"
 msgstr ""
 
-#: includes/class-edit-orders-for-woocommerce-settings.php:45
+#: includes/class-edit-orders-for-woocommerce-settings.php:50
 msgid "Found a better price"
 msgstr ""
 
-#: includes/class-edit-orders-for-woocommerce-settings.php:46
+#: includes/class-edit-orders-for-woocommerce-settings.php:51
 msgid "Delivery takes too long"
 msgstr ""
 
-#: includes/class-edit-orders-for-woocommerce-settings.php:47
+#: includes/class-edit-orders-for-woocommerce-settings.php:52
 msgid "Need to change the order"
 msgstr ""
 
@@ -1666,33 +1666,33 @@ msgid "Order edit not applied: the refund could not be recorded (%s)."
 msgstr ""
 
 #. translators: %s: balance order number.
-#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:609
+#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:610
 #, php-format
 msgid "Order changed by the customer (paid through balance order #%s):"
 msgstr ""
 
-#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:610
+#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:611
 msgid "Order changed by the customer:"
 msgstr ""
 
 #. translators: %s: balance order number.
-#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:614
+#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:615
 #, php-format
 msgid "Order edited (paid through balance order #%s):"
 msgstr ""
 
-#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:615
+#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:616
 msgid "Order edited:"
 msgstr ""
 
 #. translators: 1: amount, 2: order number.
-#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:694
+#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:695
 #, php-format
 msgid "%1$s on balance order #%2$s"
 msgstr ""
 
 #. translators: %s: list of refunds, such as "$22.60 on balance order #123".
-#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:701
+#: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:702
 #, php-format
 msgid "These refunds for this edit were already made and stand: %s. Check them against the order."
 msgstr ""
@@ -1995,11 +1995,11 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: includes/wpheka-ui/class-fields.php:398
+#: includes/wpheka-ui/class-fields.php:451
 msgid "No settings match"
 msgstr ""
 
-#: includes/wpheka-ui/class-fields.php:398
+#: includes/wpheka-ui/class-fields.php:451
 msgid "Try another word, or clear the search to see every setting."
 msgstr ""
 
@@ -2063,49 +2063,53 @@ msgstr ""
 msgid "Need a hand?"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:215
+#: includes/wpheka-ui/class-page.php:216
 msgid "More from WPHEKA"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:216
+#: includes/wpheka-ui/class-page.php:217
 msgid "WooCommerce plugins trusted since 2017, with 64,000+ downloads."
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:217
+#: includes/wpheka-ui/class-page.php:218
 msgid "Previous plugins"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:218
+#: includes/wpheka-ui/class-page.php:219
 msgid "Next plugins"
 msgstr ""
 
 #. translators: %s: WPHEKA link.
-#: includes/wpheka-ui/class-page.php:240
+#: includes/wpheka-ui/class-page.php:241
 #, php-format
 msgid "Made with care by %s · WooCommerce plugins since 2017"
 msgstr ""
 
 #. translators: %s: plugin name.
-#: includes/wpheka-ui/class-page.php:244
+#: includes/wpheka-ui/class-page.php:245
 #, php-format
 msgid "Enjoying %s?"
 msgstr ""
 
 #. translators: %s: plugin name.
-#: includes/wpheka-ui/class-page.php:244
+#: includes/wpheka-ui/class-page.php:245
 msgid "Rate it"
 msgstr ""
 
 #. translators: %s: plugin name.
-#: includes/wpheka-ui/class-page.php:244
+#: includes/wpheka-ui/class-page.php:245
 msgid "five stars on WordPress.org (opens in a new tab)"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:249
+#: includes/wpheka-ui/class-page.php:250
 msgid "Unsaved changes"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:255
+#: includes/wpheka-ui/class-page.php:259
+msgid "Dismiss"
+msgstr ""
+
+#: includes/wpheka-ui/class-page.php:263
 msgid "Settings saved"
 msgstr ""
 
