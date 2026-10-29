@@ -3,7 +3,7 @@
  * Plugin Name: WPHEKA Edit Orders for WooCommerce
  * Plugin URI: https://www.wpheka.com/product/edit-orders-for-woocommerce/
  * Description: Edit WooCommerce orders after payment and settle the difference correctly: refunds for decreases, a pay link for increases.
- * Version: 1.3.0
+ * Version: 1.4.0
  * Author: WPHEKA
  * Author URI: https://www.wpheka.com/
  * Text Domain: wpheka-edit-orders-for-woocommerce
@@ -21,7 +21,7 @@
 
 defined( 'ABSPATH' ) || exit;
 
-define( 'EDIT_ORDERS_FOR_WOOCOMMERCE_VERSION', '1.3.0' );
+define( 'EDIT_ORDERS_FOR_WOOCOMMERCE_VERSION', '1.4.0' );
 define( 'EDIT_ORDERS_FOR_WOOCOMMERCE_FILE', __FILE__ );
 define( 'EDIT_ORDERS_FOR_WOOCOMMERCE_PATH', plugin_dir_path( __FILE__ ) );
 define( 'EDIT_ORDERS_FOR_WOOCOMMERCE_URL', plugin_dir_url( __FILE__ ) );
@@ -51,8 +51,38 @@ function edit_orders_for_woocommerce_activate() {
 	// Before install() creates the table option it reads to tell a new site from an upgrade.
 	Edit_Orders_For_WooCommerce_Settings::remember_installed_version();
 	Edit_Orders_For_WooCommerce_Audit_Log::install();
+	// The hold's status isn't registered yet while activating: release on the next load.
+	update_option( 'edit_orders_for_woocommerce_release_left_over', 'yes', false );
 }
 register_activation_hook( __FILE__, 'edit_orders_for_woocommerce_activate' );
+
+/**
+ * Deactivation: release every order held as Open for changes, so none is left in a
+ * status WooCommerce no longer knows. Data is kept.
+ *
+ * @return void
+ */
+function edit_orders_for_woocommerce_deactivate() {
+	if ( class_exists( 'Edit_Orders_For_WooCommerce_Hold' ) && function_exists( 'wc_get_orders' ) ) {
+		Edit_Orders_For_WooCommerce_Hold::deactivate();
+	}
+}
+register_deactivation_hook( __FILE__, 'edit_orders_for_woocommerce_deactivate' );
+
+/**
+ * After a reactivation, release any order still held from before: a site where the
+ * plugin's folder was removed without deactivating it first. Runs once, on the next load.
+ *
+ * @return void
+ */
+function edit_orders_for_woocommerce_release_left_over() {
+	if ( 'yes' !== get_option( 'edit_orders_for_woocommerce_release_left_over' ) || ! class_exists( 'Edit_Orders_For_WooCommerce_Hold' ) ) {
+		return;
+	}
+	delete_option( 'edit_orders_for_woocommerce_release_left_over' );
+	Edit_Orders_For_WooCommerce_Hold::release_all( 'deactivated' );
+}
+add_action( 'init', 'edit_orders_for_woocommerce_release_left_over', 20 );
 
 /**
  * Load the plugin once WooCommerce is available.

@@ -55,8 +55,20 @@ abstract class Edit_Orders_For_WooCommerce_Email_Base extends WC_Email {
 		}
 
 		if ( is_a( $order, 'WC_Order' ) ) {
+			/**
+			 * The data an Edit Orders email is built from, for example to add a fee or where
+			 * a refund went. Print it on edit_orders_for_woocommerce_email_after_summary.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param array    $data     Template data.
+			 * @param string   $email_id Email ID.
+			 * @param WC_Order $order    Order.
+			 */
+			$data = (array) apply_filters( 'edit_orders_for_woocommerce_email_data', (array) $data, $this->id, $order );
+
 			$this->object                         = $order;
-			$this->data                           = (array) $data;
+			$this->data                           = $data;
 			$this->placeholders['{order_number}'] = $order->get_order_number();
 			$this->placeholders['{order_date}']   = wc_format_datetime( $order->get_date_created() );
 			if ( $this->customer_email ) {

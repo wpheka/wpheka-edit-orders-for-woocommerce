@@ -22,6 +22,13 @@ class Edit_Orders_For_WooCommerce_Email_Balance_Due extends WC_Email {
 	public $changes = array();
 
 	/**
+	 * Data for the template, filtered (since 1.4.0): { changes }.
+	 *
+	 * @var array
+	 */
+	public $data = array();
+
+	/**
 	 * Constructor.
 	 */
 	public function __construct() {
@@ -73,10 +80,12 @@ class Edit_Orders_For_WooCommerce_Email_Balance_Due extends WC_Email {
 		}
 
 		if ( is_a( $balance, 'WC_Order' ) ) {
-			$original                                      = wc_get_order( $balance->get_parent_id() );
-			$this->object                                  = $balance;
-			$this->recipient                               = $balance->get_billing_email();
-			$this->changes                                 = (array) $changes;
+			$original        = wc_get_order( $balance->get_parent_id() );
+			$this->object    = $balance;
+			$this->recipient = $balance->get_billing_email();
+			/** This filter is documented in includes/emails/class-edit-orders-for-woocommerce-email-base.php */
+			$this->data                                    = (array) apply_filters( 'edit_orders_for_woocommerce_email_data', array( 'changes' => (array) $changes ), $this->id, $balance );
+			$this->changes                                 = isset( $this->data['changes'] ) ? (array) $this->data['changes'] : (array) $changes;
 			$this->placeholders['{order_number}']          = $balance->get_order_number();
 			$this->placeholders['{original_order_number}'] = $original ? $original->get_order_number() : '';
 		}
@@ -99,6 +108,7 @@ class Edit_Orders_For_WooCommerce_Email_Balance_Due extends WC_Email {
 			'order'              => $this->object,
 			'original_order'     => $this->object ? wc_get_order( $this->object->get_parent_id() ) : null,
 			'changes'            => $this->changes,
+			'data'               => $this->data,
 			'pay_url'            => $this->object ? $this->object->get_checkout_payment_url() : '',
 			'email_heading'      => $this->get_heading(),
 			'additional_content' => $this->get_additional_content(),

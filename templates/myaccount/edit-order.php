@@ -10,6 +10,7 @@
  * @var string     $order_key       Order key for guests, empty for account holders.
  * @var string[]   $actions         Actions available now: cancel, address, swap, note.
  * @var int        $seconds_left    Seconds left in the window.
+ * @var bool       $held            The order waits as Open for changes (since 1.4.0).
  * @var bool       $excluded        The order holds a product the store never offers changes for.
  * @var string[]   $address_types   Addresses the customer may change: shipping, billing.
  * @var bool       $cancel_pending  A cancellation request is waiting for the store.
@@ -28,6 +29,14 @@
 defined( 'ABSPATH' ) || exit;
 
 $edit_orders_for_woocommerce_currency = array( 'currency' => $order->get_currency() );
+
+// Every argument this template got, for the hooks below.
+$edit_orders_for_woocommerce_args = array();
+foreach ( array( 'order', 'order_key', 'actions', 'seconds_left', 'held', 'excluded', 'address_types', 'cancel_pending', 'cancel_mode', 'refund_method', 'reasons', 'reason_required', 'policy', 'note_max', 'swap_options', 'state', 'message' ) as $edit_orders_for_woocommerce_arg ) {
+	if ( isset( $$edit_orders_for_woocommerce_arg ) ) {
+		$edit_orders_for_woocommerce_args[ $edit_orders_for_woocommerce_arg ] = $$edit_orders_for_woocommerce_arg;
+	}
+}
 ?>
 <section class="eofw-panel" id="edit-order">
 	<h2><?php esc_html_e( 'Need to change something?', 'wpheka-edit-orders-for-woocommerce' ); ?></h2>
@@ -102,8 +111,35 @@ $edit_orders_for_woocommerce_currency = array( 'currency' => $order->get_currenc
 				<button type="submit" class="button wp-element-button"><?php echo esc_html( $edit_orders_for_woocommerce_pays > 0 ? __( 'Confirm and pay the difference', 'wpheka-edit-orders-for-woocommerce' ) : __( 'Confirm the change', 'wpheka-edit-orders-for-woocommerce' ) ); ?></button>
 				<a href="#edit-order" class="eofw-back"><?php esc_html_e( 'Make a different change', 'wpheka-edit-orders-for-woocommerce' ); ?></a>
 			</form>
+			<?php
+			/**
+			 * At the end of the customer's preview, after the confirm form.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param array    $preview The preview.
+			 * @param WC_Order $order   Order.
+			 * @param array    $state   The whole preview state.
+			 */
+			do_action( 'edit_orders_for_woocommerce_preview_after', $edit_orders_for_woocommerce_preview, $order, $state );
+			?>
 		</div>
 	<?php endif; ?>
+
+	<?php
+	if ( $state && ! in_array( $state['type'], array( 'error', 'preview', 'success' ), true ) ) {
+		/**
+		 * Print a panel state an extension returned, such as an offer.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array    $state     The state.
+		 * @param WC_Order $order     Order.
+		 * @param string   $order_key Order key for guests, or empty.
+		 */
+		do_action( 'edit_orders_for_woocommerce_panel_state', $state, $order, $order_key );
+	}
+	?>
 
 	<?php if ( $excluded ) : ?>
 		<p class="woocommerce-info eofw-excluded"><?php echo esc_html( Edit_Orders_For_WooCommerce_Customer_Rules::excluded_message() ); ?></p>
@@ -112,11 +148,21 @@ $edit_orders_for_woocommerce_currency = array( 'currency' => $order->get_currenc
 	<?php if ( $actions ) : ?>
 		<p class="eofw-window">
 			<?php
-			printf(
-				/* translators: %s: time left, such as 0:42:10. */
-				esc_html__( 'You can change or cancel this order for another %s.', 'wpheka-edit-orders-for-woocommerce' ),
-				'<strong data-eofw-seconds="' . esc_attr( $seconds_left ) . '">' . esc_html( gmdate( $seconds_left >= DAY_IN_SECONDS ? 'z\d H:i' : 'H:i:s', $seconds_left ) ) . '</strong>'
-			);
+			$edit_orders_for_woocommerce_clock = '<strong data-eofw-seconds="' . esc_attr( $seconds_left ) . '">' . esc_html( gmdate( $seconds_left >= DAY_IN_SECONDS ? 'z\d H:i' : 'H:i:s', $seconds_left ) ) . '</strong>';
+			if ( ! empty( $held ) ) {
+				printf(
+					/* translators: 1: time the changes close, for example 3:40 pm, 2: time left, such as 0:42:10. */
+					esc_html__( 'You can still change this order until %1$s (%2$s left).', 'wpheka-edit-orders-for-woocommerce' ),
+					esc_html( Edit_Orders_For_WooCommerce_Hold::close_time( time() + $seconds_left ) ),
+					$edit_orders_for_woocommerce_clock // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built and escaped above.
+				);
+			} else {
+				printf(
+					/* translators: %s: time left, such as 0:42:10. */
+					esc_html__( 'You can change or cancel this order for another %s.', 'wpheka-edit-orders-for-woocommerce' ),
+					$edit_orders_for_woocommerce_clock // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- built and escaped above.
+				);
+			}
 			?>
 		</p>
 		<form method="post" class="eofw-close">
@@ -223,6 +269,20 @@ $edit_orders_for_woocommerce_currency = array( 'currency' => $order->get_currenc
 			</details>
 		<?php endif; ?>
 
+		<?php
+		/**
+		 * Print more actions in the panel, before Cancel.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param WC_Order $order     Order.
+		 * @param string[] $actions   Actions available now.
+		 * @param string   $order_key Order key for guests, or empty.
+		 * @param array    $args      Every argument the template got.
+		 */
+		do_action( 'edit_orders_for_woocommerce_panel_actions', $order, $actions, $order_key, $edit_orders_for_woocommerce_args );
+		?>
+
 		<?php if ( in_array( 'cancel', $actions, true ) ) : ?>
 			<details class="eofw-action eofw-cancel">
 				<summary><?php esc_html_e( 'Cancel this order', 'wpheka-edit-orders-for-woocommerce' ); ?></summary>
@@ -242,6 +302,18 @@ $edit_orders_for_woocommerce_currency = array( 'currency' => $order->get_currenc
 						<label for="eofw-reason-other"><?php esc_html_e( 'Tell us more', 'wpheka-edit-orders-for-woocommerce' ); ?></label>
 						<textarea id="eofw-reason-other" name="reason_other" rows="2" maxlength="500"></textarea>
 					</p>
+					<?php
+					/**
+					 * Print more fields in the cancel form, after the reason.
+					 *
+					 * @since 1.4.0
+					 *
+					 * @param WC_Order $order     Order.
+					 * @param string   $order_key Order key for guests, or empty.
+					 * @param array    $args      Every argument the template got.
+					 */
+					do_action( 'edit_orders_for_woocommerce_cancel_form_fields', $order, $order_key, $edit_orders_for_woocommerce_args );
+					?>
 					<?php if ( '' !== $policy ) : ?>
 						<p class="eofw-policy"><?php echo esc_html( $policy ); ?></p>
 					<?php endif; ?>

@@ -239,6 +239,7 @@ class Edit_Orders_For_WooCommerce_Audit_Log {
 				'before'           => array( 'items' => isset( self::$before[ $order->get_id() ] ) ? self::$before[ $order->get_id() ] : array() ),
 				'after'            => array(
 					'changes'     => $plan->get_descriptions(),
+					'types'       => self::change_types( $plan ),
 					'refund'      => $plan->get_refund_amount(),
 					'balance_due' => isset( $result['balance_order_id'] ) ? wc_get_order( $result['balance_order_id'] )->get_total() : 0,
 				),
@@ -269,12 +270,26 @@ class Edit_Orders_For_WooCommerce_Audit_Log {
 				'actor_type'       => 'customer',
 				'actor_id'         => $balance->get_customer_id(),
 				'action'           => is_wp_error( $result ) ? 'balance_paid_failed' : 'balance_paid',
-				'after'            => is_wp_error( $result ) ? array( 'error' => $result->get_error_message() ) : array( 'changes' => $result['plan']->get_descriptions() ),
+				'after'            => is_wp_error( $result ) ? array( 'error' => $result->get_error_message() ) : array(
+					'changes' => $result['plan']->get_descriptions(),
+					'types'   => self::change_types( $result['plan'] ),
+				),
 				'refund_id'        => ( ! is_wp_error( $result ) && ! empty( $result['refund']['refund_id'] ) ) ? $result['refund']['refund_id'] : 0,
 				'balance_order_id' => $balance->get_id(),
 				'amount'           => $balance->get_total(),
 			)
 		);
+	}
+
+	/**
+	 * The kinds of change a plan makes, untranslated, for reports (since 1.4.0): quantity,
+	 * remove, swap, add, address, plus any type an extension added.
+	 *
+	 * @param Edit_Orders_For_WooCommerce_Settlement_Plan $plan Plan.
+	 * @return string[]
+	 */
+	public static function change_types( $plan ) {
+		return $plan instanceof Edit_Orders_For_WooCommerce_Settlement_Plan ? $plan->get_change_types() : array();
 	}
 
 	/**

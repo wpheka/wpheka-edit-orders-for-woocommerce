@@ -106,7 +106,8 @@ function requestFor( qty ) {
 		await save( page );
 		const after = await page.locator( 'form[data-w-form] input[role="switch"][name]' ).evaluateAll( ( els ) => els.map( ( e ) => ( { name: e.name, checked: e.checked } ) ) );
 		const flipped = switches.filter( ( s ) => after.find( ( a ) => a.name === s.name && a.checked !== s.checked ) );
-		check( `all ${ switches.length } switches save their new state`, 12 === switches.length && flipped.length === switches.length, `${ flipped.length }/${ switches.length }` );
+		// Six setting switches (the hold since 1.4.0) and the seven emails.
+		check( `all ${ switches.length } switches save their new state`, 13 === switches.length && flipped.length === switches.length, `${ flipped.length }/${ switches.length }` );
 		const chipNow = await page.locator( '.w-chip input[value="processing"]' ).isChecked();
 		check( 'a status chip saves', chipNow !== chips.find( ( c ) => 'processing' === c.value ).checked );
 		const cardNow = await page.locator( '.w-option input[type="checkbox"]' ).first().isChecked();

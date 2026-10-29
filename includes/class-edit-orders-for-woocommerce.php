@@ -71,6 +71,7 @@ final class Edit_Orders_For_WooCommerce {
 		require_once $engine . 'class-edit-orders-for-woocommerce-audit-log.php';
 		require_once $engine . 'class-edit-orders-for-woocommerce-cancellation.php';
 		require_once $engine . 'class-edit-orders-for-woocommerce-customer-rules.php';
+		require_once $engine . 'class-edit-orders-for-woocommerce-hold.php';
 		require_once EDIT_ORDERS_FOR_WOOCOMMERCE_PATH . 'includes/emails/class-edit-orders-for-woocommerce-emails.php';
 		require_once EDIT_ORDERS_FOR_WOOCOMMERCE_PATH . 'includes/frontend/class-edit-orders-for-woocommerce-frontend.php';
 
@@ -96,6 +97,7 @@ final class Edit_Orders_For_WooCommerce {
 		Edit_Orders_For_WooCommerce_Audit_Log::init();
 		Edit_Orders_For_WooCommerce_Emails::init();
 		Edit_Orders_For_WooCommerce_Frontend::init();
+		Edit_Orders_For_WooCommerce_Hold::init();
 
 		// An order paid, moved on or changed can join or leave the Orders screen's view.
 		foreach ( array( 'woocommerce_payment_complete', 'woocommerce_order_status_changed', 'edit_orders_for_woocommerce_after_apply', 'edit_orders_for_woocommerce_window_closed', 'edit_orders_for_woocommerce_cancel_requested' ) as $hook ) {

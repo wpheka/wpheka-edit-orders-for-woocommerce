@@ -88,7 +88,40 @@ class Edit_Orders_For_WooCommerce_Customer_Rules {
 			return 0;
 		}
 
-		return max( 0, $start + Edit_Orders_For_WooCommerce_Settings::window_seconds() - time() );
+		/**
+		 * When the time for customer changes ends, as a timestamp. The countdown, the
+		 * badge and the hold's release all follow it.
+		 *
+		 * A window longer than the setting also needs edit_orders_for_woocommerce_window_max_seconds,
+		 * so the Orders screen's "Customer can still change" view still finds the order.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param int      $end   Start plus the window from the settings.
+		 * @param WC_Order $order Order.
+		 * @param int      $start When the window started (payment, or the order date for cash on delivery).
+		 */
+		$end = (int) apply_filters( 'edit_orders_for_woocommerce_window_end', $start + Edit_Orders_For_WooCommerce_Settings::window_seconds(), $order, $start );
+
+		return max( 0, $end - time() );
+	}
+
+	/**
+	 * The longest window any order can have, in seconds. The Orders screen asks the
+	 * database only for orders paid within it.
+	 *
+	 * @return int
+	 */
+	public static function window_max_seconds() {
+		/**
+		 * The longest time for changes any order can have, in seconds. Raise it together
+		 * with edit_orders_for_woocommerce_window_end when some orders get a longer window.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param int $seconds Default: the window from the settings.
+		 */
+		return max( 0, (int) apply_filters( 'edit_orders_for_woocommerce_window_max_seconds', Edit_Orders_For_WooCommerce_Settings::window_seconds() ) );
 	}
 
 	/**

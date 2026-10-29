@@ -36,6 +36,16 @@ do_action( 'woocommerce_email_header', $email_heading, $email ); ?>
 <p><a class="link" href="<?php echo esc_url( $order->get_edit_order_url() ); ?>"><?php esc_html_e( 'View the order', 'wpheka-edit-orders-for-woocommerce' ); ?></a></p>
 
 <?php
+/**
+ * After the summary, before the order details (since 1.4.0).
+ *
+ * @param WC_Order $order      Order.
+ * @param array    $data       The email's data.
+ * @param bool     $plain_text Plain text.
+ * @param WC_Email $email      Email.
+ */
+do_action( 'edit_orders_for_woocommerce_email_after_summary', $order, isset( $data ) ? (array) $data : array(), $plain_text, $email );
+
 if ( $additional_content ) {
 	echo wp_kses_post( wpautop( wptexturize( $additional_content ) ) );
 }

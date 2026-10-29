@@ -230,7 +230,14 @@
 					// The preview's run ID, so the debug log follows the change from preview to refund.
 					run: $panel.find( 'input[name="run"]' ).val() || ''
 				};
-				post( 'apply', $.param( options ) + '&' + formData() ).done(
+				// Fields an extension printed in the preview go with the form, for edit_orders_for_woocommerce_admin_apply_args.
+				var extra = $.map(
+					$panel.find( ':input[name]' ).not( '[name="send_pay_link"], [name="notify_customer"], [name="expect"], [name="run"]' ).serializeArray(),
+					function ( field ) {
+						return encodeURIComponent( field.name.replace( /^([^\[]+)/, 'form[$1]' ) ) + '=' + encodeURIComponent( field.value );
+					}
+				).join( '&' );
+				post( 'apply', $.param( options ) + '&' + formData() + ( extra ? '&' + extra : '' ) ).done(
 					function ( response ) {
 						if ( response && response.success ) {
 								window.location = response.data.redirect;

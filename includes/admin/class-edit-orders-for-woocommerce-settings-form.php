@@ -51,11 +51,12 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 	 * @return string[]
 	 */
 	public static function keys() {
-		return array( 'admin_enabled', 'editable_statuses', 'customer_enabled', 'window_minutes', 'action_cancel', 'action_address_shipping', 'action_address_billing', 'action_swap', 'action_note', 'note_max_length', 'excluded_products', 'excluded_categories', 'cancel_mode', 'cancel_reasons', 'cancel_reason_required', 'cancel_policy', 'debug_log' );
+		return array( 'admin_enabled', 'editable_statuses', 'customer_enabled', 'window_minutes', 'hold_enabled', 'action_cancel', 'action_address_shipping', 'action_address_billing', 'action_swap', 'action_note', 'note_max_length', 'excluded_products', 'excluded_categories', 'cancel_mode', 'cancel_reasons', 'cancel_reason_required', 'cancel_policy', 'debug_log' );
 	}
 
 	/**
-	 * Statuses a store owner may allow editing in. Final and unpaid statuses are left out.
+	 * Statuses a store owner may allow editing in. Final and unpaid statuses are left out,
+	 * and so is Open for changes: it is editable whenever the hold is on.
 	 *
 	 * @return array status => label
 	 */
@@ -63,7 +64,7 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 		$statuses = array();
 		foreach ( wc_get_order_statuses() as $status => $label ) {
 			$status = 'wc-' === substr( $status, 0, 3 ) ? substr( $status, 3 ) : $status;
-			if ( ! in_array( $status, array( 'pending', 'completed', 'cancelled', 'refunded', 'failed', 'checkout-draft' ), true ) ) {
+			if ( ! in_array( $status, array( 'pending', 'completed', 'cancelled', 'refunded', 'failed', 'checkout-draft', Edit_Orders_For_WooCommerce_Hold::STATUS ), true ) ) {
 				$statuses[ $status ] = $label;
 			}
 		}
@@ -187,7 +188,7 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 
 		$input    = isset( $post[ $option ] ) && is_array( $post[ $option ] ) ? $post[ $option ] : array();
 		$settings = (array) get_option( $option, array() );
-		$yes_no   = array( 'admin_enabled', 'customer_enabled', 'action_cancel', 'action_address_shipping', 'action_address_billing', 'action_swap', 'action_note', 'cancel_reason_required', 'debug_log' );
+		$yes_no   = array( 'admin_enabled', 'customer_enabled', 'hold_enabled', 'action_cancel', 'action_address_shipping', 'action_address_billing', 'action_swap', 'action_note', 'cancel_reason_required', 'debug_log' );
 
 		foreach ( $yes_no as $key ) {
 			$settings[ $key ] = isset( $input[ $key ] ) && in_array( $input[ $key ], array( 'yes', '1', 1, true ), true ) ? 'yes' : 'no';
@@ -243,6 +244,18 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 				}
 			}
 		}
+
+		/**
+		 * The settings form was saved. Save fields printed on
+		 * edit_orders_for_woocommerce_settings_after_sections from the same post. The
+		 * nonce and capability were checked before; sanitise every value. Free's change
+		 * log doesn't record these fields.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array $post The posted form, unslashed.
+		 */
+		do_action( 'edit_orders_for_woocommerce_settings_save', $post );
 
 		$after = Edit_Orders_For_WooCommerce_Settings::all();
 		unset( $after['action_address'], $before['action_address'] );
@@ -338,6 +351,14 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 				'min'     => 5,
 				'max'     => 10080,
 				'minutes' => true,
+			)
+		);
+		Fields::switch_row(
+			array(
+				'name'    => self::field( 'hold_enabled' ),
+				'checked' => 'yes' === $s['hold_enabled'],
+				'label'   => __( 'Hold new orders while customers can change them', 'wpheka-edit-orders-for-woocommerce' ),
+				'help'    => __( 'Paid orders wait as Open for changes until the time for changes ends, then move to Processing. Tools that ship Processing orders won\'t pick them up early.', 'wpheka-edit-orders-for-woocommerce' ),
 			)
 		);
 		Fields::options_row(
@@ -495,13 +516,25 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 		);
 		Fields::section_end();
 
+		/**
+		 * Print more settings sections inside the settings form, after Advanced. Build
+		 * them with the bundled kit (Fields::section_start() ... section_end()) so the
+		 * save bar, search and unsaved-changes warning cover them, add their links on
+		 * edit_orders_for_woocommerce_settings_sections and save them on
+		 * edit_orders_for_woocommerce_settings_save.
+		 *
+		 * @since 1.4.0
+		 */
+		do_action( 'edit_orders_for_woocommerce_settings_after_sections' );
+
 		Fields::find_empty();
 	}
 
 	/**
 	 * Numbers for the stats strip, from the activity log, for the last 30 days.
 	 *
-	 * @return array { edited, refunds, refunded, links, links_paid, collected, customer }
+	 * @return array { edited, refunds, refunded, links, links_paid, collected, customer,
+	 *                 cancelled, cancelled_customer, cancel_declined, closed_early, open_now, held }
 	 */
 	public static function stats() {
 		global $wpdb;
@@ -518,7 +551,11 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 					SUM( CASE WHEN action = 'balance_created' THEN 1 ELSE 0 END ) AS links,
 					SUM( CASE WHEN action = 'balance_paid' THEN 1 ELSE 0 END ) AS links_paid,
 					SUM( CASE WHEN action = 'balance_paid' THEN amount ELSE 0 END ) AS collected,
-					SUM( CASE WHEN actor_type IN ( 'customer', 'guest' ) AND action IN ( 'edit', 'balance_created', 'cancel_requested', 'cancelled', 'note_changed' ) THEN 1 ELSE 0 END ) AS customer
+					SUM( CASE WHEN actor_type IN ( 'customer', 'guest' ) AND action IN ( 'edit', 'balance_created', 'cancel_requested', 'cancelled', 'note_changed' ) THEN 1 ELSE 0 END ) AS customer,
+					SUM( CASE WHEN action = 'cancelled' THEN 1 ELSE 0 END ) AS cancelled,
+					SUM( CASE WHEN action = 'cancelled' AND actor_type IN ( 'customer', 'guest' ) THEN 1 ELSE 0 END ) AS cancelled_customer,
+					SUM( CASE WHEN action = 'cancel_declined' THEN 1 ELSE 0 END ) AS cancel_declined,
+					SUM( CASE WHEN action = 'window_closed' THEN 1 ELSE 0 END ) AS closed_early
 				FROM {$table} WHERE created_at >= %s",
 				$since
 			),
@@ -527,11 +564,15 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 		// phpcs:enable WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared
 
 		$out = array();
-		foreach ( array( 'edited', 'refunds', 'links', 'links_paid', 'customer' ) as $key ) {
+		foreach ( array( 'edited', 'refunds', 'links', 'links_paid', 'customer', 'cancelled', 'cancelled_customer', 'cancel_declined', 'closed_early' ) as $key ) {
 			$out[ $key ] = isset( $row[ $key ] ) ? (int) $row[ $key ] : 0;
 		}
 		$out['refunded']  = isset( $row['refunded'] ) ? (float) $row['refunded'] : 0.0;
 		$out['collected'] = isset( $row['collected'] ) ? (float) $row['collected'] : 0.0;
+
+		// Right now, not the last 30 days: the Orders screen's own view, and the held orders.
+		$out['open_now'] = class_exists( 'Edit_Orders_For_WooCommerce_Orders_List' ) ? count( Edit_Orders_For_WooCommerce_Orders_List::open_order_ids() ) : 0;
+		$out['held']     = (int) wc_orders_count( Edit_Orders_For_WooCommerce_Hold::STATUS );
 
 		return $out;
 	}

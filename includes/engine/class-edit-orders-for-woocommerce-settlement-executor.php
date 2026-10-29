@@ -40,6 +40,20 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 	}
 
 	/**
+	 * Check an order and build the plan inside the current run, writing nothing (since 1.4.0).
+	 * Unlike preview(), it doesn't start a run of its own: for a confirmed change, whose run
+	 * continues the preview's.
+	 *
+	 * @param WC_Order $order   Order.
+	 * @param array[]  $changes Raw changes.
+	 * @param string   $actor   `staff`, `customer` or `guest`.
+	 * @return Edit_Orders_For_WooCommerce_Settlement_Plan|WP_Error
+	 */
+	public static function plan( WC_Order $order, array $changes, $actor = 'staff' ) {
+		return self::check( $order, $changes, $actor );
+	}
+
+	/**
 	 * Check an order and build the plan, logging why it was refused.
 	 *
 	 * @param WC_Order $order   Order.
@@ -61,8 +75,7 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 			return $eligible;
 		}
 
-		$plan = Edit_Orders_For_WooCommerce_Settlement_Plan::build( $order, new Edit_Orders_For_WooCommerce_Change_Set( $changes ) );
-		$plan->set_actor( $actor );
+		$plan = Edit_Orders_For_WooCommerce_Settlement_Plan::build( $order, new Edit_Orders_For_WooCommerce_Change_Set( $changes ), $actor );
 
 		if ( $plan->get_errors() ) {
 			Edit_Orders_For_WooCommerce_Log::notice(
@@ -319,12 +332,14 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 		 * Fired before a change set is applied or sent for payment.
 		 *
 		 * @since 1.0.0
+		 * @since 1.4.0 The caller's options as a fourth argument.
 		 *
 		 * @param WC_Order                                    $order Order.
 		 * @param Edit_Orders_For_WooCommerce_Settlement_Plan $plan  Plan.
 		 * @param string                                      $actor Actor.
+		 * @param array                                       $args  Options from the caller (see edit_orders_for_woocommerce_admin_apply_args).
 		 */
-		do_action( 'edit_orders_for_woocommerce_before_apply', $order, $plan, $actor );
+		do_action( 'edit_orders_for_woocommerce_before_apply', $order, $plan, $actor, $args );
 
 		if ( $plan->needs_balance() ) {
 			$balance = Edit_Orders_For_WooCommerce_Balance_Orders::create( $order, $plan );
@@ -480,7 +495,9 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 				$lines,
 				$amount,
 				/* translators: %s: original order number. */
-				sprintf( __( 'Order #%s edited', 'wpheka-edit-orders-for-woocommerce' ), $order->get_order_number() )
+				sprintf( __( 'Order #%s edited', 'wpheka-edit-orders-for-woocommerce' ), $order->get_order_number() ),
+				true,
+				'edit'
 			);
 			if ( is_wp_error( $done ) ) {
 				self::log_refund_not_recorded( $order, $paid->get_id(), $done, $refunds_made );
@@ -520,7 +537,9 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 				$order,
 				$plan->get_refund_lines(),
 				$plan->get_parent_refund_amount(),
-				__( 'Order edited', 'wpheka-edit-orders-for-woocommerce' )
+				__( 'Order edited', 'wpheka-edit-orders-for-woocommerce' ),
+				true,
+				'edit'
 			);
 			remove_filter( 'woocommerce_order_fully_refunded_status', $keep_status );
 
@@ -642,12 +661,27 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 			$refund = $summary;
 		}
 
-		return array(
+		$result = array(
 			'status'          => 'applied',
 			'plan'            => $plan,
 			'refund'          => $refund,
 			'balance_refunds' => $balance_refunds,
 		);
+
+		/**
+		 * Fired once a plan has been carried out: money moved, lines switched, the order
+		 * note written and the order saved. Also after a balance order is paid.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param WC_Order                                    $order   Original order.
+		 * @param Edit_Orders_For_WooCommerce_Settlement_Plan $plan    Plan.
+		 * @param WC_Order|null                               $balance The paid balance order, when applying after payment.
+		 * @param array                                       $result  { status, plan, refund, balance_refunds }.
+		 */
+		do_action( 'edit_orders_for_woocommerce_plan_run', $order, $plan, $balance, $result );
+
+		return $result;
 	}
 
 	/**

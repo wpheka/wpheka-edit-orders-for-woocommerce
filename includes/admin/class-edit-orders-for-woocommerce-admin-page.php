@@ -98,16 +98,72 @@ class Edit_Orders_For_WooCommerce_Admin_Page {
 	}
 
 	/**
-	 * The tab being shown. Settings needs manage_woocommerce; without it Activity opens.
+	 * The page's tabs, in order.
+	 *
+	 * @return array[] Each { key, label, capability, count }.
+	 */
+	public static function tabs() {
+		$tabs = array(
+			array(
+				'key'        => 'settings',
+				'label'      => __( 'Settings', 'wpheka-edit-orders-for-woocommerce' ),
+				'capability' => Edit_Orders_For_WooCommerce_Settings_Form::CAPABILITY,
+				'count'      => 0,
+			),
+			array(
+				'key'        => 'activity',
+				'label'      => __( 'Activity', 'wpheka-edit-orders-for-woocommerce' ),
+				'capability' => Edit_Orders_For_WooCommerce_Admin::CAPABILITY,
+				'count'      => Edit_Orders_For_WooCommerce_Cancellation::pending_count(),
+			),
+			array(
+				'key'        => 'help',
+				'label'      => __( 'Help', 'wpheka-edit-orders-for-woocommerce' ),
+				'capability' => Edit_Orders_For_WooCommerce_Admin::CAPABILITY,
+				'count'      => 0,
+			),
+		);
+
+		/**
+		 * Tabs on WPHEKA > Edit Orders. A tab added here is printed by the action
+		 * edit_orders_for_woocommerce_page_tab_{key}, and shown only to users with its capability.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array[] $tabs Each { key, label, capability, count }.
+		 */
+		$tabs = (array) apply_filters( 'edit_orders_for_woocommerce_page_tabs', $tabs );
+
+		$out = array();
+		foreach ( $tabs as $tab ) {
+			if ( ! is_array( $tab ) || empty( $tab['key'] ) ) {
+				continue;
+			}
+			$key         = sanitize_key( $tab['key'] );
+			$out[ $key ] = array(
+				'key'        => $key,
+				'label'      => isset( $tab['label'] ) ? (string) $tab['label'] : $key,
+				'capability' => ! empty( $tab['capability'] ) ? (string) $tab['capability'] : Edit_Orders_For_WooCommerce_Admin::CAPABILITY,
+				'count'      => isset( $tab['count'] ) ? absint( $tab['count'] ) : 0,
+			);
+		}
+
+		return array_values( $out );
+	}
+
+	/**
+	 * The tab being shown. An unknown tab opens Settings; a tab the user may not open
+	 * (Settings needs manage_woocommerce) opens Activity.
 	 *
 	 * @return string
 	 */
 	public static function current_tab() {
-		$tab = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'settings'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- which tab to show.
-		if ( ! in_array( $tab, array( 'settings', 'activity', 'help' ), true ) ) {
+		$tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : 'settings'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended -- which tab to show.
+		$tabs = array_column( self::tabs(), 'capability', 'key' );
+		if ( ! isset( $tabs[ $tab ] ) ) {
 			$tab = 'settings';
 		}
-		if ( 'settings' === $tab && ! current_user_can( Edit_Orders_For_WooCommerce_Settings_Form::CAPABILITY ) ) {
+		if ( ! isset( $tabs[ $tab ] ) || ! current_user_can( $tabs[ $tab ] ) ) {
 			$tab = 'activity';
 		}
 
@@ -146,13 +202,26 @@ class Edit_Orders_For_WooCommerce_Admin_Page {
 	 *
 	 * @return array
 	 */
-	private static function links() {
-		return array(
+	public static function links() {
+		$links = array(
 			'docs'    => 'https://wordpress.org/plugins/' . self::SLUG . '/#faq',
 			'support' => 'https://wordpress.org/support/plugin/' . self::SLUG . '/',
 			'changes' => 'https://wordpress.org/plugins/' . self::SLUG . '/#developers',
 			'review'  => 'https://wordpress.org/support/plugin/' . self::SLUG . '/reviews/#new-post',
 		);
+
+		/**
+		 * Links in the page header, the help card and the Help tab: docs, support,
+		 * changes and review. Keys added here are passed on to added tabs.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param string[] $links Key => URL.
+		 */
+		$filtered = (array) apply_filters( 'edit_orders_for_woocommerce_page_links', $links );
+
+		// The four the page prints are always there.
+		return array_merge( $links, array_filter( array_map( 'strval', $filtered ) ) );
 	}
 
 	/**
@@ -165,13 +234,15 @@ class Edit_Orders_For_WooCommerce_Admin_Page {
 
 		$tab   = self::current_tab();
 		$links = self::links();
-		$can   = current_user_can( Edit_Orders_For_WooCommerce_Settings_Form::CAPABILITY );
 		$tabs  = array();
-		if ( $can ) {
-			$tabs[] = array( __( 'Settings', 'wpheka-edit-orders-for-woocommerce' ), self::url( 'settings' ), 'settings' === $tab );
+		foreach ( self::tabs() as $item ) {
+			if ( ! current_user_can( $item['capability'] ) ) {
+				continue;
+			}
+			$tabs[] = 'activity' === $item['key'] || $item['count']
+				? array( $item['label'], self::url( $item['key'] ), $tab === $item['key'], $item['count'], true )
+				: array( $item['label'], self::url( $item['key'] ), $tab === $item['key'] );
 		}
-		$tabs[] = array( __( 'Activity', 'wpheka-edit-orders-for-woocommerce' ), self::url( 'activity' ), 'activity' === $tab, Edit_Orders_For_WooCommerce_Cancellation::pending_count(), true );
-		$tabs[] = array( __( 'Help', 'wpheka-edit-orders-for-woocommerce' ), self::url( 'help' ), 'help' === $tab );
 
 		Page::open(
 			array(
@@ -191,7 +262,7 @@ class Edit_Orders_For_WooCommerce_Admin_Page {
 			)
 		);
 
-		if ( 'help' !== $tab ) {
+		if ( in_array( $tab, array( 'settings', 'activity' ), true ) ) {
 			self::render_stats();
 		}
 
@@ -199,8 +270,18 @@ class Edit_Orders_For_WooCommerce_Admin_Page {
 			self::render_settings( $links );
 		} elseif ( 'activity' === $tab ) {
 			Edit_Orders_For_WooCommerce_Activity::render();
-		} else {
+		} elseif ( 'help' === $tab ) {
 			self::render_help( $links );
+		} else {
+			/**
+			 * Print a tab added through edit_orders_for_woocommerce_page_tabs. Only runs for
+			 * users with the tab's capability.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param array $links The page's links (see edit_orders_for_woocommerce_page_links).
+			 */
+			do_action( 'edit_orders_for_woocommerce_page_tab_' . $tab, $links );
 		}
 
 		Page::close(
@@ -251,7 +332,31 @@ class Edit_Orders_For_WooCommerce_Admin_Page {
 					'icon'  => 'user',
 					'mint'  => true,
 					'value' => number_format_i18n( $n['customer'] ),
-					'meta'  => __( 'Made by customers themselves', 'wpheka-edit-orders-for-woocommerce' ),
+					'meta'  => $n['closed_early']
+						/* translators: %s: number of customers who confirmed their order as it was. */
+						? sprintf( _n( 'Made by customers themselves. %s said all good.', 'Made by customers themselves. %s said all good.', $n['closed_early'], 'wpheka-edit-orders-for-woocommerce' ), number_format_i18n( $n['closed_early'] ) )
+						: __( 'Made by customers themselves', 'wpheka-edit-orders-for-woocommerce' ),
+				),
+				array(
+					'label' => __( 'Cancellations', 'wpheka-edit-orders-for-woocommerce' ),
+					'icon'  => 'xcircle',
+					'value' => number_format_i18n( $n['cancelled'] ),
+					'meta'  => sprintf(
+						/* translators: 1: cancellations by customers, 2: cancellation requests declined. */
+						__( '%1$s by customers, %2$s declined', 'wpheka-edit-orders-for-woocommerce' ),
+						number_format_i18n( $n['cancelled_customer'] ),
+						number_format_i18n( $n['cancel_declined'] )
+					),
+				),
+				array(
+					'label' => __( 'Open for changes now', 'wpheka-edit-orders-for-woocommerce' ),
+					'icon'  => 'gauge',
+					'mint'  => true,
+					'value' => number_format_i18n( $n['open_now'] ),
+					'meta'  => Edit_Orders_For_WooCommerce_Hold::is_on() || $n['held']
+						/* translators: %s: number of orders held as Open for changes. */
+						? sprintf( _n( '%s held', '%s held', $n['held'], 'wpheka-edit-orders-for-woocommerce' ), number_format_i18n( $n['held'] ) )
+						: __( 'Customers can still change these', 'wpheka-edit-orders-for-woocommerce' ),
 				),
 			)
 		);
@@ -294,15 +399,7 @@ class Edit_Orders_For_WooCommerce_Admin_Page {
 		echo '<div class="w-stack">';
 		self::render_start();
 		echo '<div class="w-layout"><div>';
-		Page::nav(
-			array(
-				array( 'editing', 'pencil', __( 'Order editing', 'wpheka-edit-orders-for-woocommerce' ) ),
-				array( 'customers', 'users', __( 'Customer changes', 'wpheka-edit-orders-for-woocommerce' ) ),
-				array( 'cancellations', 'xcircle', __( 'Cancellations', 'wpheka-edit-orders-for-woocommerce' ) ),
-				array( 'emails', 'mail', __( 'Emails', 'wpheka-edit-orders-for-woocommerce' ) ),
-				array( 'advanced', 'sliders', __( 'Advanced', 'wpheka-edit-orders-for-woocommerce' ) ),
-			)
-		);
+		Page::nav( self::settings_nav() );
 		echo '</div><form id="edit-orders-settings" method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" data-w-form>';
 		echo '<input type="hidden" name="action" value="' . esc_attr( Edit_Orders_For_WooCommerce_Settings_Form::SAVE_ACTION ) . '">';
 		wp_nonce_field( Edit_Orders_For_WooCommerce_Settings_Form::SAVE_ACTION );
@@ -318,6 +415,66 @@ class Edit_Orders_For_WooCommerce_Admin_Page {
 			)
 		);
 		echo '</aside></div></div>';
+	}
+
+	/**
+	 * The Settings tab's section links.
+	 *
+	 * @return array[] Each [ section id, icon, label ], as the kit's nav takes them.
+	 */
+	public static function settings_nav() {
+		$nav = array(
+			array(
+				'id'    => 'editing',
+				'icon'  => 'pencil',
+				'label' => __( 'Order editing', 'wpheka-edit-orders-for-woocommerce' ),
+			),
+			array(
+				'id'    => 'customers',
+				'icon'  => 'users',
+				'label' => __( 'Customer changes', 'wpheka-edit-orders-for-woocommerce' ),
+			),
+			array(
+				'id'    => 'cancellations',
+				'icon'  => 'xcircle',
+				'label' => __( 'Cancellations', 'wpheka-edit-orders-for-woocommerce' ),
+			),
+			array(
+				'id'    => 'emails',
+				'icon'  => 'mail',
+				'label' => __( 'Emails', 'wpheka-edit-orders-for-woocommerce' ),
+			),
+			array(
+				'id'    => 'advanced',
+				'icon'  => 'sliders',
+				'label' => __( 'Advanced', 'wpheka-edit-orders-for-woocommerce' ),
+			),
+		);
+
+		/**
+		 * Section links on the Settings tab. Add one for each section printed on
+		 * edit_orders_for_woocommerce_settings_after_sections.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array[] $nav Each { id, icon, label }; [ id, icon, label ] works too.
+		 */
+		$nav = (array) apply_filters( 'edit_orders_for_woocommerce_settings_sections', $nav );
+
+		$out = array();
+		foreach ( $nav as $item ) {
+			if ( ! is_array( $item ) ) {
+				continue;
+			}
+			$id    = isset( $item['id'] ) ? $item['id'] : ( isset( $item[0] ) ? $item[0] : '' );
+			$icon  = isset( $item['icon'] ) ? $item['icon'] : ( isset( $item[1] ) ? $item[1] : 'sliders' );
+			$label = isset( $item['label'] ) ? $item['label'] : ( isset( $item[2] ) ? $item[2] : '' );
+			if ( '' !== (string) $id && '' !== (string) $label ) {
+				$out[] = array( sanitize_html_class( (string) $id ), sanitize_key( (string) $icon ), (string) $label );
+			}
+		}
+
+		return $out;
 	}
 
 	/**

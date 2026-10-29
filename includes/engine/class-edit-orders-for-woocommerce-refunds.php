@@ -38,9 +38,42 @@ class Edit_Orders_For_WooCommerce_Refunds {
 	 * @param float    $amount         Total, tax included.
 	 * @param string   $reason         Reason shown on the refund.
 	 * @param bool     $customer_email Allow WooCommerce's refunded email when money is sent back.
+	 * @param string   $context        Why: edit, cancel or cancel_balance (since 1.4.0).
 	 * @return array|WP_Error { refund_id, manual, gateway_error, on_delivery }
 	 */
-	public static function refund( WC_Order $order, array $refund_lines, $amount, $reason, $customer_email = true ) {
+	public static function refund( WC_Order $order, array $refund_lines, $amount, $reason, $customer_email = true, $context = 'edit' ) {
+		/**
+		 * Handle a refund instead of the plugin, for example as store credit. Return null
+		 * to let the plugin refund as usual, a WP_Error to stop, or a result in the
+		 * plugin's own shape: { refund_id, manual, gateway_error, on_delivery }, plus an
+		 * optional destination.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param null|array|WP_Error $result         Null.
+		 * @param WC_Order            $order          The order being refunded: the original or a balance order.
+		 * @param array[]             $refund_lines   Refund lines keyed by item ID.
+		 * @param float               $amount         Total, tax included.
+		 * @param string              $reason         Reason shown on the refund.
+		 * @param string              $context        edit, cancel or cancel_balance.
+		 * @param bool                $customer_email Whether WooCommerce's refunded email may go out.
+		 */
+		$handled = apply_filters( 'edit_orders_for_woocommerce_refund_handler', null, $order, $refund_lines, (float) $amount, $reason, (string) $context, (bool) $customer_email );
+		if ( is_wp_error( $handled ) ) {
+			return $handled;
+		}
+		if ( is_array( $handled ) ) {
+			return wp_parse_args(
+				$handled,
+				array(
+					'refund_id'     => 0,
+					'manual'        => false,
+					'gateway_error' => '',
+					'on_delivery'   => false,
+				)
+			);
+		}
+
 		$on_delivery = Edit_Orders_For_WooCommerce_Eligibility::is_pay_on_delivery( $order );
 		$gateway     = wc_get_payment_gateway_by_order( $order );
 		$can_send    = ! $on_delivery && (float) $amount > 0 && $gateway && $gateway->supports( 'refunds' );

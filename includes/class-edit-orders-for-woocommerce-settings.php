@@ -36,6 +36,7 @@ class Edit_Orders_For_WooCommerce_Settings {
 			'editable_statuses'       => array( 'processing', 'on-hold' ),
 			'customer_enabled'        => 'yes',
 			'window_minutes'          => 60,
+			'hold_enabled'            => 'no',
 			'action_cancel'           => 'yes',
 			'action_address'          => 'yes',
 			'action_address_shipping' => 'yes',

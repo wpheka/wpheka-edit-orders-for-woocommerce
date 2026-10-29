@@ -144,20 +144,39 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 	private $lines_at_build = null;
 
 	/**
+	 * Extra data an extension keeps with the plan: saved with it, restored with it and
+	 * part of its fingerprint, so what was previewed is what moves.
+	 *
+	 * @var array
+	 */
+	private $extra = array();
+
+	/**
+	 * The kinds of change in the plan, untranslated (quantity, swap, address and so on).
+	 *
+	 * @var string[]
+	 */
+	private $change_types = array();
+
+	/**
 	 * Build a plan.
 	 *
 	 * @param WC_Order                               $order      Order.
 	 * @param Edit_Orders_For_WooCommerce_Change_Set $change_set Change set.
+	 * @param string                                 $actor      staff, customer or guest (since 1.4.0).
 	 * @return Edit_Orders_For_WooCommerce_Settlement_Plan
 	 */
-	public static function build( WC_Order $order, Edit_Orders_For_WooCommerce_Change_Set $change_set ) {
+	public static function build( WC_Order $order, Edit_Orders_For_WooCommerce_Change_Set $change_set, $actor = 'staff' ) {
 		$plan                    = new self();
 		$plan->order_id          = $order->get_id();
 		$plan->errors            = $change_set->get_errors();
 		$plan->refunded_at_build = (float) $order->get_total_refunded();
 		$plan->lines_at_build    = self::line_states( $order );
+		$plan->set_actor( $actor );
 
 		foreach ( $change_set->get_changes() as $change ) {
+			$plan->change_types[] = (string) $change['type'];
+
 			if ( 'add' === $change['type'] ) {
 				$plan->plan_add( $change );
 				continue;
@@ -168,8 +187,24 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 				continue;
 			}
 
+			if ( ! in_array( $change['type'], array( 'quantity', 'remove', 'swap' ), true ) ) {
+				/**
+				 * Plan a change type the plan doesn't know (one added through
+				 * edit_orders_for_woocommerce_normalise_change). Use the plan's
+				 * mutators (add_refund_line(), add_balance_item(), set_extra() and so on).
+				 *
+				 * @since 1.4.0
+				 *
+				 * @param Edit_Orders_For_WooCommerce_Settlement_Plan $plan   Plan.
+				 * @param WC_Order                                    $order  Order.
+				 * @param array                                       $change The change.
+				 */
+				do_action( 'edit_orders_for_woocommerce_plan_change', $plan, $order, $change );
+				continue;
+			}
+
 			$item  = $order->get_item( $change['item_id'] );
-			$check = Edit_Orders_For_WooCommerce_Eligibility::check_item( $order, $item );
+			$check = Edit_Orders_For_WooCommerce_Eligibility::check_item( $order, $item, $change, $plan->actor );
 			if ( is_wp_error( $check ) ) {
 				Edit_Orders_For_WooCommerce_Log::debug(
 					sprintf( 'order %d: item %d not editable: %s (%s)', $order->get_id(), (int) $change['item_id'], Edit_Orders_For_WooCommerce_Log::reason( $check ), $check->get_error_code() ),
@@ -578,6 +613,132 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 	}
 
 	/**
+	 * Add or replace a refund line (since 1.4.0).
+	 *
+	 * @param int   $item_id  Order item ID.
+	 * @param array $line     Refund line: qty, refund_total, refund_tax.
+	 * @param int   $order_id The order the line is on: 0 for the original order, or a paid balance order's ID.
+	 */
+	public function add_refund_line( $item_id, array $line, $order_id = 0 ) {
+		$item_id  = absint( $item_id );
+		$order_id = absint( $order_id );
+		if ( ! $order_id || $order_id === $this->order_id ) {
+			$this->refund_lines[ $item_id ] = $line;
+			return;
+		}
+
+		$this->balance_refunds[ $order_id ][ $item_id ] = $line;
+		if ( ! isset( $this->balance_refunded_at_build[ $order_id ] ) ) {
+			$balance                                      = wc_get_order( $order_id );
+			$this->balance_refunded_at_build[ $order_id ] = $balance ? (float) $balance->get_total_refunded() : 0.0;
+		}
+	}
+
+	/**
+	 * Replace a refund line (since 1.4.0). The same as add_refund_line().
+	 *
+	 * @param int   $item_id  Order item ID.
+	 * @param array $line     Refund line.
+	 * @param int   $order_id 0 for the original order, or a paid balance order's ID.
+	 */
+	public function set_refund_line( $item_id, array $line, $order_id = 0 ) {
+		$this->add_refund_line( $item_id, $line, $order_id );
+	}
+
+	/**
+	 * Remove a refund line (since 1.4.0).
+	 *
+	 * @param int $item_id  Order item ID.
+	 * @param int $order_id 0 for the original order, or a paid balance order's ID.
+	 */
+	public function remove_refund_line( $item_id, $order_id = 0 ) {
+		$item_id  = absint( $item_id );
+		$order_id = absint( $order_id );
+		if ( ! $order_id || $order_id === $this->order_id ) {
+			unset( $this->refund_lines[ $item_id ] );
+			return;
+		}
+
+		unset( $this->balance_refunds[ $order_id ][ $item_id ] );
+		if ( empty( $this->balance_refunds[ $order_id ] ) ) {
+			unset( $this->balance_refunds[ $order_id ], $this->balance_refunded_at_build[ $order_id ] );
+		}
+	}
+
+	/**
+	 * Add an item to the balance order (since 1.4.0).
+	 *
+	 * @param array $item As the plan's own: type (product or fee), name, product_id, quantity, total, taxes, for_item.
+	 */
+	public function add_balance_item( array $item ) {
+		$this->balance_items[] = $item;
+	}
+
+	/**
+	 * Replace a balance order item (since 1.4.0).
+	 *
+	 * @param int   $index Position in get_balance_items().
+	 * @param array $item  Item.
+	 */
+	public function set_balance_item( $index, array $item ) {
+		$index = absint( $index );
+		if ( isset( $this->balance_items[ $index ] ) ) {
+			$this->balance_items[ $index ] = $item;
+		}
+	}
+
+	/**
+	 * Add a description for the preview and the order note (since 1.4.0).
+	 *
+	 * @param string $description Description.
+	 */
+	public function add_description( $description ) {
+		$this->descriptions[] = (string) $description;
+	}
+
+	/**
+	 * Add a reason the plan can't be applied (since 1.4.0).
+	 *
+	 * @param string $error Message.
+	 */
+	public function add_error( $error ) {
+		$this->errors[] = (string) $error;
+	}
+
+	/**
+	 * The kinds of change in the plan, untranslated and without repeats (since 1.4.0).
+	 *
+	 * @return string[]
+	 */
+	public function get_change_types() {
+		return array_values( array_unique( $this->change_types ) );
+	}
+
+	/**
+	 * Keep extra data with the plan (since 1.4.0). It changes the fingerprint.
+	 *
+	 * @param string $key   Key.
+	 * @param mixed  $value Value; null removes it.
+	 */
+	public function set_extra( $key, $value ) {
+		if ( null === $value ) {
+			unset( $this->extra[ (string) $key ] );
+			return;
+		}
+		$this->extra[ (string) $key ] = $value;
+	}
+
+	/**
+	 * Extra data kept with the plan (since 1.4.0).
+	 *
+	 * @param string $key Key.
+	 * @return mixed Null when not set.
+	 */
+	public function get_extra( $key ) {
+		return isset( $this->extra[ (string) $key ] ) ? $this->extra[ (string) $key ] : null;
+	}
+
+	/**
 	 * Refund lines keyed by order item ID.
 	 *
 	 * @return array[]
@@ -710,7 +871,7 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 	 * @return array
 	 */
 	public function to_array() {
-		return array(
+		$data = array(
 			'version'          => 2,
 			'order_id'         => $this->order_id,
 			'refund_lines'     => $this->refund_lines,
@@ -726,7 +887,15 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 			'actor'            => $this->actor,
 			'refunded'         => $this->refunded_at_build,
 			'lines'            => $this->lines_at_build,
+			'types'            => $this->get_change_types(),
 		);
+
+		// Only when set: a plan without it keeps the fingerprint it had before 1.4.0.
+		if ( $this->extra ) {
+			$data['extra'] = $this->extra;
+		}
+
+		return $data;
 	}
 
 	/**
@@ -737,7 +906,7 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 	 */
 	public function fingerprint() {
 		$data = $this->to_array();
-		unset( $data['descriptions'], $data['address_notes'], $data['actor'] );
+		unset( $data['descriptions'], $data['address_notes'], $data['actor'], $data['types'] );
 
 		return substr( md5( (string) wp_json_encode( $data ) ), 0, 12 );
 	}
@@ -961,6 +1130,9 @@ class Edit_Orders_For_WooCommerce_Settlement_Plan {
 		// Plans stored before this was recorded skip the "refunded since" check.
 		$plan->refunded_at_build = isset( $data['refunded'] ) ? (float) $data['refunded'] : null;
 		$plan->lines_at_build    = isset( $data['lines'] ) ? (array) $data['lines'] : null;
+		$plan->extra             = isset( $data['extra'] ) ? (array) $data['extra'] : array();
+		// Plans stored before 1.4.0 have no types: the log shows them without.
+		$plan->change_types = isset( $data['types'] ) ? array_map( 'strval', (array) $data['types'] ) : array();
 
 		return $plan;
 	}

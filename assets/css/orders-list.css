@@ -23,6 +23,12 @@
 	background: #f0f6fc;
 }
 
+/* The Open for changes status pill: light blue, apart from Processing's green. */
+.order-status.status-open-for-changes {
+	background: #d8eefb;
+	color: #1d5d8c;
+}
+
 @media screen and (max-width: 782px) {
 	.column-edit_orders_window {
 		width: auto;

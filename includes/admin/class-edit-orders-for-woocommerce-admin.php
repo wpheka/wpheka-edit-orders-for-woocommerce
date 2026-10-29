@@ -142,6 +142,11 @@ class Edit_Orders_For_WooCommerce_Admin {
 			echo wp_kses_post( Edit_Orders_For_WooCommerce_Orders_List::order_screen_note( $order ) );
 		}
 
+		if ( Edit_Orders_For_WooCommerce_Hold::is_held( $order ) && current_user_can( self::CAPABILITY ) ) {
+			echo '<p class="eofw-hold"><strong>' . esc_html__( 'Open for changes.', 'wpheka-edit-orders-for-woocommerce' ) . '</strong> ' . esc_html__( 'The order moves to Processing when the time for changes ends.', 'wpheka-edit-orders-for-woocommerce' ) . '</p>';
+			echo '<p><a class="button eofw-release-now" href="' . esc_url( Edit_Orders_For_WooCommerce_Hold::release_now_url( $order ) ) . '">' . esc_html__( 'Release now', 'wpheka-edit-orders-for-woocommerce' ) . '</a></p>';
+		}
+
 		$manual = $order->get_meta( Edit_Orders_For_WooCommerce_Refunds::MANUAL_REFUND_META );
 		if ( $manual ) {
 			echo '<p class="edit-orders-manual-refund"><strong>';
@@ -391,6 +396,17 @@ class Edit_Orders_For_WooCommerce_Admin {
 			echo '</fieldset>';
 		}
 
+		/**
+		 * Print more fields in the editor's Address tab, inside its form. A field named
+		 * `shipping_method` (a rate ID such as flat_rate:3) is posted with the address,
+		 * and on its own changes only the shipping method.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param WC_Order $order Order.
+		 */
+		do_action( 'edit_orders_for_woocommerce_admin_address_tab', $order );
+
 		echo '</div><p class="edit-orders-rate-choice" hidden></p>';
 		echo '</div>';
 	}
@@ -596,6 +612,18 @@ class Edit_Orders_For_WooCommerce_Admin {
 			echo '<label><input type="checkbox" name="notify_customer" value="1" checked /> ' . esc_html__( 'Email the customer that the order was updated', 'wpheka-edit-orders-for-woocommerce' ) . '</label><br />';
 		}
 		echo '</p>';
+
+		/**
+		 * Print more in the store owner's preview, before the Apply button. Fields here are
+		 * posted with the change (read them on edit_orders_for_woocommerce_admin_apply_args).
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param WC_Order                                    $order Order.
+		 * @param Edit_Orders_For_WooCommerce_Settlement_Plan $plan  Plan.
+		 */
+		do_action( 'edit_orders_for_woocommerce_admin_preview_after', $order, $plan );
+
 		echo '<input type="hidden" name="expect" value="' . esc_attr( $plan->fingerprint() ) . '" />';
 		// Applying continues the preview's run in the log.
 		echo '<input type="hidden" name="run" value="' . esc_attr( Edit_Orders_For_WooCommerce_Log::run_id() ) . '" />';
@@ -733,16 +761,31 @@ class Edit_Orders_For_WooCommerce_Admin {
 	 * @return array|WP_Error Executor result.
 	 */
 	public static function apply( WC_Order $order, array $form, array $options ) {
+		$args = array(
+			'send_pay_link'   => ! empty( $options['send_pay_link'] ),
+			'notify_customer' => ! empty( $options['notify_customer'] ),
+			'expect'          => isset( $options['expect'] ) ? (string) $options['expect'] : '',
+			'run'             => isset( $options['run'] ) ? (string) $options['run'] : '',
+		);
+
+		/**
+		 * Options for a store owner's change, passed to the executor and to
+		 * edit_orders_for_woocommerce_before_apply, for example a choice made in fields printed
+		 * on edit_orders_for_woocommerce_admin_preview_after. Sanitise what you read from $posted.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array    $args   send_pay_link, notify_customer, expect, run.
+		 * @param WC_Order $order  Order.
+		 * @param array    $posted The editor's posted form.
+		 */
+		$args = (array) apply_filters( 'edit_orders_for_woocommerce_admin_apply_args', $args, $order, $form );
+
 		$result = Edit_Orders_For_WooCommerce_Settlement_Executor::apply(
 			$order,
 			self::changes_from_request( $order, $form ),
 			'staff',
-			array(
-				'send_pay_link'   => ! empty( $options['send_pay_link'] ),
-				'notify_customer' => ! empty( $options['notify_customer'] ),
-				'expect'          => isset( $options['expect'] ) ? (string) $options['expect'] : '',
-				'run'             => isset( $options['run'] ) ? (string) $options['run'] : '',
-			)
+			$args
 		);
 
 		if ( ! is_wp_error( $result ) ) {

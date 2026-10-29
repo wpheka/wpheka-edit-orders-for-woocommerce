@@ -87,10 +87,14 @@ class Edit_Orders_For_WooCommerce_Address_Change {
 		$new_location = self::tax_location( $order, $new_billing, $new_shipping );
 		$tax_moves    = wc_tax_enabled() && $old_location !== $new_location;
 
-		// Re-rate shipping when the destination moved.
+		// Re-rate shipping when the destination moved, or when another method was chosen
+		// for the same destination (since 1.4.0).
 		$shipping_items = $order->get_shipping_methods();
 		$new_rate       = null;
-		if ( $shipping_items && self::destination( $old_shipping ) !== self::destination( $new_shipping ) ) {
+		$chosen         = isset( $change['shipping_method'] ) ? (string) $change['shipping_method'] : '';
+		$current_line   = $shipping_items ? current( $shipping_items ) : null;
+		$other_method   = '' !== $chosen && $current_line && $chosen !== $current_line->get_method_id() . ':' . $current_line->get_instance_id();
+		if ( $shipping_items && ( $other_method || self::destination( $old_shipping ) !== self::destination( $new_shipping ) ) ) {
 			if ( count( $shipping_items ) > 1 ) {
 				return new WP_Error( 'edit_orders_for_woocommerce_address_shipping_lines', __( 'This order has more than one shipping line. Change its address in WooCommerce and adjust the shipping by hand.', 'wpheka-edit-orders-for-woocommerce' ) );
 			}
@@ -98,6 +102,11 @@ class Edit_Orders_For_WooCommerce_Address_Change {
 			if ( is_wp_error( $new_rate ) ) {
 				return $new_rate;
 			}
+		}
+
+		// Only a method, and the one the order already has: nothing changes.
+		if ( empty( $change['billing'] ) && empty( $change['shipping'] ) && ! $new_rate ) {
+			return new WP_Error( 'edit_orders_for_woocommerce_no_changes', __( 'Nothing to change.', 'wpheka-edit-orders-for-woocommerce' ) );
 		}
 
 		// New figures per line, and the difference per tax rate.

@@ -31,6 +31,16 @@ if ( ! empty( $data['balance_due'] ) ) {
 }
 echo "\n" . esc_url_raw( $order->get_edit_order_url() ) . "\n\n";
 
+/**
+ * After the summary, before the order details (since 1.4.0).
+ *
+ * @param WC_Order $order      Order.
+ * @param array    $data       The email's data.
+ * @param bool     $plain_text Plain text.
+ * @param WC_Email $email      Email.
+ */
+do_action( 'edit_orders_for_woocommerce_email_after_summary', $order, isset( $data ) ? (array) $data : array(), $plain_text, $email );
+
 if ( $additional_content ) {
 	echo esc_html( wp_strip_all_tags( wptexturize( $additional_content ) ) ) . "\n\n";
 }

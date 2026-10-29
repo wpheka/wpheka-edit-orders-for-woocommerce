@@ -11,6 +11,57 @@
 
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
+/*
+ * Always, before anything else: release orders still held as Open for changes, so none
+ * is left in a status WooCommerce no longer knows (a network, or a plugin deleted without
+ * being deactivated). The plugin isn't loaded here, so the status is registered first:
+ * order queries ignore statuses WordPress doesn't know.
+ */
+if ( function_exists( 'wc_get_orders' ) ) {
+	if ( ! get_post_status_object( 'wc-open-for-changes' ) ) {
+		register_post_status(
+			'wc-open-for-changes',
+			array(
+				'label'                     => 'Open for changes',
+				'public'                    => false,
+				'exclude_from_search'       => false,
+				'show_in_admin_all_list'    => true,
+				'show_in_admin_status_list' => true,
+			)
+		);
+	}
+	add_filter(
+		'wc_order_statuses',
+		static function ( $statuses ) {
+			$statuses['wc-open-for-changes'] = 'Open for changes';
+			return $statuses;
+		}
+	);
+
+	// The gateways' filters keep a cash on delivery order without a paid date at Processing.
+	WC()->payment_gateways();
+
+	for ( $edit_orders_for_woocommerce_round = 0; $edit_orders_for_woocommerce_round < 200; $edit_orders_for_woocommerce_round++ ) {
+		$edit_orders_for_woocommerce_held = wc_get_orders(
+			array(
+				'type'   => 'shop_order',
+				'status' => array( 'wc-open-for-changes' ),
+				'limit'  => 50,
+			)
+		);
+		if ( ! $edit_orders_for_woocommerce_held ) {
+			break;
+		}
+		foreach ( $edit_orders_for_woocommerce_held as $edit_orders_for_woocommerce_order ) {
+			$edit_orders_for_woocommerce_order->update_status( 'processing', __( 'Released to Processing: Edit Orders for WooCommerce was deleted.', 'wpheka-edit-orders-for-woocommerce' ) );
+		}
+	}
+
+	if ( function_exists( 'as_unschedule_all_actions' ) ) {
+		as_unschedule_all_actions( 'edit_orders_for_woocommerce_release_hold' );
+	}
+}
+
 if ( 'yes' !== get_option( 'edit_orders_for_woocommerce_delete_data' ) ) {
 	return;
 }

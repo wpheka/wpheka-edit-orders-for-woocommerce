@@ -2,9 +2,9 @@
 Contributors: wpheka, akshayaswaroop
 Tags: edit order, change order, cancel order, order editing, woocommerce
 Requires at least: 6.6
-Tested up to: 7.1.3
+Tested up to: 7.1.4
 Requires PHP: 7.4
-Stable tag: 1.3.0
+Stable tag: 1.4.0
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -31,6 +31,8 @@ You always see a preview first: what changes, what is refunded, what the custome
 * Approve or decline cancellation requests in **WPHEKA > Edit Orders**, next to a log of every change
 * See which orders customers can still change: a "Changes open, 2 h left" badge in the orders list, a "Customer can still change" view and a note on the order screen. Pack those orders once the time is up.
 * Never offer changes for chosen products or categories, such as made-to-order or final-sale items. Your own edits still work.
+* Hold new orders while customers can change them (off by default). Paid orders wait as **Open for changes** instead of Processing, so tools that ship Processing orders don't pick them up early. When the time for changes ends, the order moves to Processing once. It moves earlier when the customer says all is good, a tracking number is added or you click **Release now**.
+* See the last 30 days at a glance: orders edited, refunds, pay links, customer changes and cancellations, plus how many orders customers can change right now.
 
 = Customers can =
 
@@ -65,6 +67,19 @@ Seven WooCommerce emails, which you can turn on or off in WPHEKA > Edit Orders >
 * A debug log you can share with support, with no names, emails or addresses in it
 * No tracking and no notices outside its own screens
 
+= For developers =
+
+Every hook starts with `edit_orders_for_woocommerce_`. Added in 1.4.0:
+
+* The hold: `should_hold`, `hold_started`, `hold_released`. The time for changes: `window_end`, `window_max_seconds`.
+* Customer actions and the panel: `customer_changes`, `customer_action`, `customer_change_intercept`, `panel_args`, `panel_actions`, `panel_state`, `customer_preview`, `preview_after`, `balance_redirect`.
+* Changes and settlement: `normalise_change`, `plan_change`, `can_change_item`, `plan_run`, `refund_handler`, and the plan's methods `add_refund_line()`, `add_balance_item()`, `add_description()`, `add_error()`, `set_extra()` and `get_extra()`. A shipping method can now change on its own in an address change.
+* Cancellations: `cancel_intercept`, `cancel_request_details`, `cancel_form_fields`, `cancel_refund`, `execute_cancel`, `request_summary`, `activity_requests`, `activity_requests_heading`, `activity_decide`.
+* The editor and emails: `admin_preview_after`, `admin_apply_args` (and a fourth argument on `before_apply`), `admin_address_tab`, `email_data`, `email_after_summary`.
+* The Edit Orders page: `page_tabs` (with `page_tab_{key}`), `settings_sections`, `settings_after_sections`, `settings_save`, `page_links`.
+
+Each hook has a docblock with its arguments where it fires.
+
 == Installation ==
 
 1. Install and activate WooCommerce.
@@ -90,9 +105,13 @@ Only if you choose "Cancel and refund straight away" in the settings. By default
 
 Refunds and balance orders are ordinary WooCommerce records with tax split per rate, so WooCommerce Analytics reports them correctly. When an address change moves an order to a different tax rate, one refund can hold both the tax given back and the tax charged. A few third-party invoice or tax-export plugins read WooCommerce's per-rate refund figures without their sign, so they may show the new rate's tax as refunded. Totals and Analytics are not affected.
 
+= What does "Open for changes" mean for my other plugins? =
+
+With the hold on, a paid order waits as Open for changes until the time for changes ends. WooCommerce counts it as paid: stock is reduced, Analytics counts the sale and the customer and store get their usual emails at payment. Plugins that act when an order reaches Processing (shipping labels, warehouse and fulfilment tools, your own integrations reading `status=processing`) see the order when it moves to Processing, not before. The hold is off by default.
+
 = What happens if I uninstall the plugin? =
 
-Your settings and activity log are kept, unless you tick "Delete data on uninstall" in the settings. Balance orders are ordinary orders and are always kept.
+Your settings and activity log are kept, unless you tick "Delete data on uninstall" in the settings. Balance orders are ordinary orders and are always kept. Orders still held as Open for changes are moved to Processing when you deactivate or delete the plugin. Deactivate it before removing its folder by hand.
 
 = How do I send a log to support? =
 
@@ -111,6 +130,12 @@ The plugin does not write names, emails, phone numbers or addresses to the log. 
 7. Turn each of the seven Edit Orders emails on or off, with a link to change its wording.
 
 == Changelog ==
+
+= 1.4.0 =
+* New: hold new orders while customers can change them (WPHEKA > Edit Orders > Settings > Customer changes, off by default). Paid orders wait in a new status, Open for changes, instead of Processing. They move to Processing once when the time for changes ends, when the customer says all is good, when a tracking number or fulfilment is added or when you click "Release now" in the Edit order box. Cash on delivery orders follow the same switch. Customers see "You can still change this order until 3:40 pm." Turning the hold off, deactivating or deleting the plugin moves every held order to Processing.
+* New: two more numbers on the Edit Orders page: cancellations (by customers, and requests declined) and orders customers can change right now. The customer changes number says how many customers confirmed their order as it was.
+* New: hooks for extensions, including Edit Orders Pro. See "For developers" above.
+* Improved: an order with a cancellation request can be approved while it is Open for changes.
 
 = 1.3.0 =
 * New: the orders list shows which orders customers can still change, with the time left ("Changes open, 2 h left"). A "Customer can still change" view lists only those orders. The order screen says until when. Nothing about the order changes.
@@ -154,6 +179,9 @@ The plugin does not write names, emails, phone numbers or addresses to the log. 
 * First release.
 
 == Upgrade Notice ==
+
+= 1.4.0 =
+Adds Open for changes (off by default): paid orders wait while customers can still change them, then move to Processing. Also new numbers on the Edit Orders page and hooks for extensions.
 
 = 1.3.0 =
 Shows which orders customers can still change, lets you exclude products and categories, and adds a billing address switch (off after the update until you turn it on).

@@ -57,9 +57,31 @@ class Edit_Orders_For_WooCommerce_Activity {
 	 * @param WC_Order $order    Order.
 	 * @param string   $decision approve or decline.
 	 * @param string   $message  Message to the customer when declining.
+	 * @param string   $type     The request's type: cancel, or one an extension lists (since 1.4.0).
 	 * @return array|true|WP_Error
 	 */
-	public static function decide( WC_Order $order, $decision, $message = '' ) {
+	public static function decide( WC_Order $order, $decision, $message = '', $type = 'cancel' ) {
+		/**
+		 * Answer a request in the queue. Return true or a WP_Error to handle it, or null
+		 * to let the plugin answer (cancellation requests only).
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param null|true|WP_Error $result   Null.
+		 * @param WC_Order           $order    Order.
+		 * @param string             $type     Request type.
+		 * @param string             $decision approve or decline.
+		 * @param string             $message  Message to the customer when declining.
+		 */
+		$handled = apply_filters( 'edit_orders_for_woocommerce_activity_decide', null, $order, $type, $decision, $message );
+		if ( null !== $handled ) {
+			return $handled;
+		}
+
+		if ( 'cancel' !== $type ) {
+			return new WP_Error( 'edit_orders_for_woocommerce_request_type', __( 'This request can\'t be answered here.', 'wpheka-edit-orders-for-woocommerce' ) );
+		}
+
 		if ( 'approve' === $decision ) {
 			return Edit_Orders_For_WooCommerce_Cancellation::approve( $order );
 		}
@@ -83,10 +105,11 @@ class Edit_Orders_For_WooCommerce_Activity {
 		$order    = wc_get_order( $order_id );
 		$decision = isset( $_REQUEST['decision'] ) && 'approve' === $_REQUEST['decision'] ? 'approve' : 'decline';
 		$message  = isset( $_REQUEST['message'] ) ? sanitize_textarea_field( wp_unslash( $_REQUEST['message'] ) ) : '';
+		$type     = isset( $_REQUEST['type'] ) ? sanitize_key( wp_unslash( $_REQUEST['type'] ) ) : 'cancel';
 		$redirect = isset( $_REQUEST['redirect'] ) ? esc_url_raw( wp_unslash( $_REQUEST['redirect'] ) ) : Edit_Orders_For_WooCommerce_Admin_Page::url( 'activity' );
 
 		try {
-			$result = $order ? self::decide( $order, $decision, $message ) : new WP_Error( 'edit_orders_for_woocommerce_not_found', __( 'Order not found.', 'wpheka-edit-orders-for-woocommerce' ) );
+			$result = $order ? self::decide( $order, $decision, $message, '' !== $type ? $type : 'cancel' ) : new WP_Error( 'edit_orders_for_woocommerce_not_found', __( 'Order not found.', 'wpheka-edit-orders-for-woocommerce' ) );
 		} catch ( Throwable $e ) {
 			Edit_Orders_For_WooCommerce_Settlement_Executor::log_exception( 'answering the cancellation request on order ' . $order_id, $e, $order_id );
 			throw $e;
@@ -143,32 +166,106 @@ class Edit_Orders_For_WooCommerce_Activity {
 	/**
 	 * Pending cancellation requests.
 	 */
+	/**
+	 * Requests waiting for a decision: cancellations, plus any type an extension adds.
+	 *
+	 * @return array[] Each { type, order, request }.
+	 */
+	public static function requests() {
+		$rows = array();
+		foreach ( Edit_Orders_For_WooCommerce_Cancellation::pending_requests() as $order ) {
+			$rows[] = array(
+				'type'    => 'cancel',
+				'order'   => $order,
+				'request' => (array) $order->get_meta( Edit_Orders_For_WooCommerce_Cancellation::REQUEST_META ),
+			);
+		}
+
+		/**
+		 * Requests waiting for the store. Add rows of your own type (for example customer
+		 * edits waiting for approval) and answer them on edit_orders_for_woocommerce_activity_decide.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array[] $rows Each { type, order (WC_Order), request (array: reason, time and more) }.
+		 */
+		$rows = (array) apply_filters( 'edit_orders_for_woocommerce_activity_requests', $rows );
+
+		return array_values(
+			array_filter(
+				$rows,
+				static function ( $row ) {
+					return is_array( $row ) && isset( $row['order'] ) && $row['order'] instanceof WC_Order;
+				}
+			)
+		);
+	}
+
+	/**
+	 * Pending requests.
+	 */
 	private static function render_requests() {
-		$orders = Edit_Orders_For_WooCommerce_Cancellation::pending_requests();
+		$rows = self::requests();
 
-		echo '<section class="w-section" aria-labelledby="eo-requests-t"><div class="w-section-head"><h2 id="eo-requests-t">' . esc_html__( 'Cancellation requests', 'wpheka-edit-orders-for-woocommerce' ) . '</h2>';
-		echo '<p>' . esc_html__( 'Customers asking to cancel, waiting for your decision.', 'wpheka-edit-orders-for-woocommerce' ) . '</p></div><div class="w-card">';
+		/**
+		 * The heading and line above the requests queue. Change them when you add request
+		 * types other than cancellations (edit_orders_for_woocommerce_activity_requests).
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array $heading { title, description } (plain text).
+		 */
+		$heading = wp_parse_args(
+			(array) apply_filters(
+				'edit_orders_for_woocommerce_activity_requests_heading',
+				array(
+					'title'       => __( 'Cancellation requests', 'wpheka-edit-orders-for-woocommerce' ),
+					'description' => __( 'Customers asking to cancel, waiting for your decision.', 'wpheka-edit-orders-for-woocommerce' ),
+				)
+			),
+			array(
+				'title'       => '',
+				'description' => '',
+			)
+		);
 
-		if ( ! $orders ) {
+		echo '<section class="w-section" aria-labelledby="eo-requests-t"><div class="w-section-head"><h2 id="eo-requests-t">' . esc_html( $heading['title'] ) . '</h2>';
+		echo '<p>' . esc_html( $heading['description'] ) . '</p></div><div class="w-card">';
+
+		if ( ! $rows ) {
 			echo '<div class="w-empty"><h3>' . esc_html__( 'No requests waiting.', 'wpheka-edit-orders-for-woocommerce' ) . '</h3><p>' . esc_html__( 'When a customer asks to cancel, the request appears here and in the order.', 'wpheka-edit-orders-for-woocommerce' ) . '</p></div></div></section>';
 			return;
 		}
 
 		echo '<div class="w-table-wrap"><table class="w-table edit-orders-requests"><thead><tr><th>' . esc_html__( 'Order', 'wpheka-edit-orders-for-woocommerce' ) . '</th><th>' . esc_html__( 'Asked', 'wpheka-edit-orders-for-woocommerce' ) . '</th><th>' . esc_html__( 'Reason', 'wpheka-edit-orders-for-woocommerce' ) . '</th><th>' . esc_html__( 'Total', 'wpheka-edit-orders-for-woocommerce' ) . '</th><th>' . esc_html__( 'Decision', 'wpheka-edit-orders-for-woocommerce' ) . '</th></tr></thead><tbody>';
 
-		foreach ( $orders as $order ) {
-			$request = (array) $order->get_meta( Edit_Orders_For_WooCommerce_Cancellation::REQUEST_META );
+		foreach ( $rows as $row ) {
+			$order   = $row['order'];
+			$type    = isset( $row['type'] ) ? sanitize_key( (string) $row['type'] ) : 'cancel';
+			$request = isset( $row['request'] ) ? (array) $row['request'] : array();
 			$nonce   = self::DECISION_ACTION . '_' . $order->get_id();
+			$summary = ! empty( $request['reason'] ) ? (string) $request['reason'] : __( 'None given', 'wpheka-edit-orders-for-woocommerce' );
 
-			echo '<tr data-order="' . esc_attr( $order->get_id() ) . '">';
+			/**
+			 * The text in a request's Reason cell.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param string   $summary The reason, or "None given".
+			 * @param WC_Order $order   Order.
+			 * @param array    $request The request (with `type` since 1.4.0).
+			 */
+			$summary = (string) apply_filters( 'edit_orders_for_woocommerce_request_summary', $summary, $order, array_merge( $request, array( 'type' => $type ) ) );
+
+			echo '<tr data-order="' . esc_attr( $order->get_id() ) . '" data-type="' . esc_attr( $type ) . '">';
 			echo '<td><a href="' . esc_url( $order->get_edit_order_url() ) . '">#' . esc_html( $order->get_order_number() ) . '</a> ' . esc_html( $order->get_formatted_billing_full_name() ) . ' <span class="w-pill w-pill--info w-pill--plain">' . esc_html( wc_get_order_status_name( $order->get_status() ) ) . '</span></td>';
 			echo '<td>' . esc_html( ! empty( $request['time'] ) ? wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) $request['time'] ) : '' ) . '</td>';
-			echo '<td class="w-wrap">' . esc_html( ! empty( $request['reason'] ) ? $request['reason'] : __( 'None given', 'wpheka-edit-orders-for-woocommerce' ) ) . '</td>';
+			echo '<td class="w-wrap">' . esc_html( $summary ) . '</td>';
 			echo '<td>' . wp_kses_post( $order->get_formatted_order_total() ) . '</td><td>';
 
 			echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="w-decision edit-orders-decision">';
 			wp_nonce_field( $nonce );
-			echo '<input type="hidden" name="action" value="' . esc_attr( self::DECISION_ACTION ) . '" /><input type="hidden" name="order_id" value="' . esc_attr( $order->get_id() ) . '" />';
+			echo '<input type="hidden" name="action" value="' . esc_attr( self::DECISION_ACTION ) . '" /><input type="hidden" name="order_id" value="' . esc_attr( $order->get_id() ) . '" /><input type="hidden" name="type" value="' . esc_attr( $type ) . '" />';
 			echo '<button type="submit" name="decision" value="approve" class="w-btn w-btn--primary w-btn--sm">' . esc_html__( 'Approve and refund', 'wpheka-edit-orders-for-woocommerce' ) . '</button>';
 			echo '<input type="text" class="w-input" name="message" aria-label="' . esc_attr__( 'Message to the customer', 'wpheka-edit-orders-for-woocommerce' ) . '" placeholder="' . esc_attr__( 'Message to the customer (optional, sent when declining)', 'wpheka-edit-orders-for-woocommerce' ) . '" />';
 			echo '<button type="submit" name="decision" value="decline" class="w-btn w-btn--secondary w-btn--sm">' . esc_html__( 'Decline', 'wpheka-edit-orders-for-woocommerce' ) . '</button>';
@@ -184,7 +281,7 @@ class Edit_Orders_For_WooCommerce_Activity {
 	 * @param array $filter action, from, to, page.
 	 */
 	private static function render_log( array $filter ) {
-		$labels = array(
+		$labels   = array(
 			'edit'                => __( 'Order edited', 'wpheka-edit-orders-for-woocommerce' ),
 			'balance_created'     => __( 'Balance order created', 'wpheka-edit-orders-for-woocommerce' ),
 			'balance_paid'        => __( 'Balance paid, changes applied', 'wpheka-edit-orders-for-woocommerce' ),
@@ -194,8 +291,12 @@ class Edit_Orders_For_WooCommerce_Activity {
 			'cancel_declined'     => __( 'Cancellation declined', 'wpheka-edit-orders-for-woocommerce' ),
 			'note_changed'        => __( 'Order note changed', 'wpheka-edit-orders-for-woocommerce' ),
 			'window_closed'       => __( 'Customer confirmed the order', 'wpheka-edit-orders-for-woocommerce' ),
+			'hold_started'        => __( 'Open for changes', 'wpheka-edit-orders-for-woocommerce' ),
+			'hold_released'       => __( 'Released to Processing', 'wpheka-edit-orders-for-woocommerce' ),
 		);
-		$pills  = array(
+		$pills    = array(
+			'hold_started'        => 'info',
+			'hold_released'       => 'ok',
 			'edit'                => 'info',
 			'balance_created'     => 'info',
 			'balance_paid'        => 'ok',
@@ -206,10 +307,20 @@ class Edit_Orders_For_WooCommerce_Activity {
 			'note_changed'        => 'info',
 			'window_closed'       => 'ok',
 		);
-		$actors = array(
+		$actors   = array(
 			'staff'    => __( 'Store', 'wpheka-edit-orders-for-woocommerce' ),
 			'customer' => __( 'Customer', 'wpheka-edit-orders-for-woocommerce' ),
 			'guest'    => __( 'Guest', 'wpheka-edit-orders-for-woocommerce' ),
+			'system'   => __( 'Automatic', 'wpheka-edit-orders-for-woocommerce' ),
+		);
+		$released = array(
+			'window_end'      => __( 'The time for changes ended.', 'wpheka-edit-orders-for-woocommerce' ),
+			'sweep'           => __( 'The time for changes ended.', 'wpheka-edit-orders-for-woocommerce' ),
+			'customer_closed' => __( 'The customer confirmed the order as it is.', 'wpheka-edit-orders-for-woocommerce' ),
+			'shipped'         => __( 'A tracking number or fulfilment was added.', 'wpheka-edit-orders-for-woocommerce' ),
+			'staff'           => __( 'Released by the store.', 'wpheka-edit-orders-for-woocommerce' ),
+			'setting_off'     => __( 'The hold was turned off.', 'wpheka-edit-orders-for-woocommerce' ),
+			'deactivated'     => __( 'The plugin was deactivated.', 'wpheka-edit-orders-for-woocommerce' ),
 		);
 
 		echo '<section class="w-section" aria-labelledby="eo-log-t"><div class="w-section-head"><h2 id="eo-log-t">' . esc_html__( 'Activity', 'wpheka-edit-orders-for-woocommerce' ) . '</h2>';
@@ -236,7 +347,12 @@ class Edit_Orders_For_WooCommerce_Activity {
 			$after   = json_decode( (string) $row['after_data'], true );
 			$user    = $row['actor_id'] ? get_userdata( (int) $row['actor_id'] ) : null;
 			$details = array();
-			if ( ! empty( $after['changes'] ) ) {
+			if ( 'hold_released' === $row['action'] ) {
+				$details[] = isset( $after['reason'], $released[ $after['reason'] ] ) ? $released[ $after['reason'] ] : '';
+			} elseif ( 'hold_started' === $row['action'] ) {
+				/* translators: %s: date and time. */
+				$details[] = ! empty( $after['release_at'] ) ? sprintf( __( 'Until %s.', 'wpheka-edit-orders-for-woocommerce' ), wp_date( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ), (int) $after['release_at'] ) ) : '';
+			} elseif ( ! empty( $after['changes'] ) ) {
 				$details = (array) $after['changes'];
 			} elseif ( ! empty( $after['reason'] ) ) {
 				/* translators: %s: reason. */

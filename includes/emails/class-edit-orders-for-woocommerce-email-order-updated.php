@@ -71,9 +71,10 @@ class Edit_Orders_For_WooCommerce_Email_Order_Updated extends WC_Email {
 		}
 
 		if ( is_a( $order, 'WC_Order' ) ) {
-			$this->object                         = $order;
-			$this->recipient                      = $order->get_billing_email();
-			$this->summary                        = (array) $summary;
+			$this->object    = $order;
+			$this->recipient = $order->get_billing_email();
+			/** This filter is documented in includes/emails/class-edit-orders-for-woocommerce-email-base.php */
+			$this->summary                        = (array) apply_filters( 'edit_orders_for_woocommerce_email_data', (array) $summary, $this->id, $order );
 			$this->placeholders['{order_date}']   = wc_format_datetime( $order->get_date_created() );
 			$this->placeholders['{order_number}'] = $order->get_order_number();
 		}
@@ -95,6 +96,7 @@ class Edit_Orders_For_WooCommerce_Email_Order_Updated extends WC_Email {
 		return array(
 			'order'              => $this->object,
 			'summary'            => $this->summary,
+			'data'               => $this->summary,
 			'email_heading'      => $this->get_heading(),
 			'additional_content' => $this->get_additional_content(),
 			'sent_to_admin'      => false,

@@ -71,8 +71,9 @@ class Edit_Orders_For_WooCommerce_Email_Manual_Refund extends WC_Email {
 		}
 
 		if ( is_a( $order, 'WC_Order' ) ) {
-			$this->object                         = $order;
-			$this->details                        = (array) $details;
+			$this->object = $order;
+			/** This filter is documented in includes/emails/class-edit-orders-for-woocommerce-email-base.php */
+			$this->details                        = (array) apply_filters( 'edit_orders_for_woocommerce_email_data', (array) $details, $this->id, $order );
 			$this->placeholders['{order_number}'] = $order->get_order_number();
 		}
 
@@ -93,6 +94,7 @@ class Edit_Orders_For_WooCommerce_Email_Manual_Refund extends WC_Email {
 		return array(
 			'order'              => $this->object,
 			'details'            => $this->details,
+			'data'               => $this->details,
 			'email_heading'      => $this->get_heading(),
 			'additional_content' => $this->get_additional_content(),
 			'sent_to_admin'      => true,

@@ -25,12 +25,14 @@ class Edit_Orders_For_WooCommerce_Cancellation {
 	/**
 	 * A customer asks to cancel. In instant mode the order is cancelled now.
 	 *
-	 * @param WC_Order $order  Order.
-	 * @param string   $reason Reason.
-	 * @param string   $actor  customer or guest.
+	 * @param WC_Order $order   Order.
+	 * @param string   $reason  Reason.
+	 * @param string   $actor   customer or guest.
+	 * @param array    $details More about the request, kept with it (since 1.4.0; see
+	 *                          edit_orders_for_woocommerce_cancel_request_details).
 	 * @return array|WP_Error { status: requested|cancelled, refund }
 	 */
-	public static function request( WC_Order $order, $reason, $actor ) {
+	public static function request( WC_Order $order, $reason, $actor, array $details = array() ) {
 		$reason = sanitize_textarea_field( $reason );
 		$mode   = 'instant' === Edit_Orders_For_WooCommerce_Settings::get( 'cancel_mode' ) ? 'instant' : 'approval';
 		$run    = Edit_Orders_For_WooCommerce_Log::start_run();
@@ -59,11 +61,14 @@ class Edit_Orders_For_WooCommerce_Cancellation {
 
 		$order->update_meta_data(
 			self::REQUEST_META,
-			array(
-				'reason' => $reason,
-				'actor'  => $actor,
-				'time'   => time(),
-				'run'    => $run,
+			array_merge(
+				$details,
+				array(
+					'reason' => $reason,
+					'actor'  => $actor,
+					'time'   => time(),
+					'run'    => $run,
+				)
 			)
 		);
 
@@ -153,6 +158,25 @@ class Edit_Orders_For_WooCommerce_Cancellation {
 			return new WP_Error( 'edit_orders_for_woocommerce_already_cancelled', __( 'This order is already cancelled.', 'wpheka-edit-orders-for-woocommerce' ) );
 		}
 
+		/**
+		 * Carry out a cancellation instead of the plugin, for example a partial one. Return
+		 * null to cancel the whole order as usual, or a result (array or WP_Error) to stop
+		 * here. Runs while the order's cancel guard is held.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param null|array|WP_Error $result  Null.
+		 * @param WC_Order            $order   Order, freshly loaded.
+		 * @param string              $actor   customer, guest or staff.
+		 * @param string              $reason  Reason.
+		 * @param array               $request The stored request (reason, actor, time and any details).
+		 */
+		$handled = apply_filters( 'edit_orders_for_woocommerce_execute_cancel', null, $order, $actor, $reason, (array) $order->get_meta( self::REQUEST_META ) );
+		if ( null !== $handled ) {
+			Edit_Orders_For_WooCommerce_Lock::unclaim( $guard );
+			return $handled;
+		}
+
 		try {
 			$result = self::execute_claimed( $order, $actor, $reason );
 		} catch ( Throwable $e ) {
@@ -195,12 +219,18 @@ class Edit_Orders_For_WooCommerce_Cancellation {
 
 		$refund = null;
 		$order  = wc_get_order( $order->get_id() );
-		$amount = (float) $order->get_remaining_refund_amount();
+		$cancel = self::cancel_refund( $order, $actor, $reason );
+		$amount = $cancel['amount'];
 
 		if ( ! $on_delivery && $amount > 0 ) {
-			$refund = self::refund_remaining( $order, __( 'Order cancelled', 'wpheka-edit-orders-for-woocommerce' ), $balances['made'] );
+			$refund = self::refund_remaining( $order, __( 'Order cancelled', 'wpheka-edit-orders-for-woocommerce' ), $balances['made'], 'cancel', $cancel );
 		}
 		$refunded = ( $on_delivery ? 0 : $amount ) + $balance_refunded;
+
+		$after = array( 'reason' => $reason );
+		if ( $cancel['fee'] > 0 ) {
+			$after['fee'] = $cancel['fee'];
+		}
 
 		Edit_Orders_For_WooCommerce_Audit_Log::add(
 			array(
@@ -208,7 +238,7 @@ class Edit_Orders_For_WooCommerce_Cancellation {
 				'actor_type' => $actor,
 				'actor_id'   => get_current_user_id(),
 				'action'     => 'cancelled',
-				'after'      => array( 'reason' => $reason ),
+				'after'      => $after,
 				'refund_id'  => is_array( $refund ) ? $refund['refund_id'] : 0,
 				'amount'     => $refunded,
 			)
@@ -261,16 +291,61 @@ class Edit_Orders_For_WooCommerce_Cancellation {
 	}
 
 	/**
+	 * What a cancellation refunds on the original order: every line left, unless an
+	 * extension takes a fee (filter edit_orders_for_woocommerce_cancel_refund).
+	 *
+	 * @param WC_Order $order  Order, freshly loaded.
+	 * @param string   $actor  customer, guest or staff.
+	 * @param string   $reason Reason.
+	 * @return array { lines, amount, fee }
+	 */
+	private static function cancel_refund( WC_Order $order, $actor, $reason ) {
+		$amount = (float) $order->get_remaining_refund_amount();
+
+		/**
+		 * What cancelling an order refunds, for example less a cancellation fee. The amount
+		 * reaches the refund, the activity log, the result and the emails.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array    $refund { lines: refund lines keyed by item ID, amount: total, fee: kept back }.
+		 * @param WC_Order $order  Order.
+		 * @param string   $actor  customer, guest or staff.
+		 * @param string   $reason Reason.
+		 */
+		$refund = (array) apply_filters(
+			'edit_orders_for_woocommerce_cancel_refund',
+			array(
+				'lines'  => self::remaining_lines( $order ),
+				'amount' => $amount,
+				'fee'    => 0.0,
+			),
+			$order,
+			$actor,
+			$reason
+		);
+
+		return array(
+			'lines'  => isset( $refund['lines'] ) ? (array) $refund['lines'] : array(),
+			'amount' => isset( $refund['amount'] ) ? max( 0.0, min( $amount, (float) $refund['amount'] ) ) : $amount,
+			'fee'    => isset( $refund['fee'] ) ? max( 0.0, (float) $refund['fee'] ) : 0.0,
+		);
+	}
+
+	/**
 	 * Refund everything left on an order, keeping it Cancelled. If not even a
 	 * refund record can be made, the order is flagged for a manual refund.
 	 *
-	 * @param WC_Order $order  Order.
-	 * @param string   $reason Reason shown on the refund.
-	 * @param string[] $made   Refunds already made in this cancellation, for the log.
+	 * @param WC_Order   $order   Order.
+	 * @param string     $reason  Reason shown on the refund.
+	 * @param string[]   $made    Refunds already made in this cancellation, for the log.
+	 * @param string     $context cancel (the original order) or cancel_balance (since 1.4.0).
+	 * @param array|null $cancel  { lines, amount } from cancel_refund(), or null for all that is left (since 1.4.0).
 	 * @return array|WP_Error Refund result.
 	 */
-	private static function refund_remaining( WC_Order $order, $reason, array $made = array() ) {
-		$amount = (float) $order->get_remaining_refund_amount();
+	private static function refund_remaining( WC_Order $order, $reason, array $made = array(), $context = 'cancel', $cancel = null ) {
+		$amount = is_array( $cancel ) ? (float) $cancel['amount'] : (float) $order->get_remaining_refund_amount();
+		$lines  = is_array( $cancel ) ? (array) $cancel['lines'] : self::remaining_lines( $order );
 
 		// Keep the order Cancelled; WooCommerce would switch a fully refunded order to Refunded.
 		$keep_status = function () {
@@ -278,7 +353,7 @@ class Edit_Orders_For_WooCommerce_Cancellation {
 		};
 		add_filter( 'woocommerce_order_fully_refunded_status', $keep_status );
 		// The cancellation email states the refund, so WooCommerce's refunded email would be a second one.
-		$refund = Edit_Orders_For_WooCommerce_Refunds::refund( $order, self::remaining_lines( $order ), $amount, $reason, false );
+		$refund = Edit_Orders_For_WooCommerce_Refunds::refund( $order, $lines, $amount, $reason, false, $context );
 		remove_filter( 'woocommerce_order_fully_refunded_status', $keep_status );
 
 		if ( is_wp_error( $refund ) ) {
@@ -346,7 +421,7 @@ class Edit_Orders_For_WooCommerce_Cancellation {
 				$balance = wc_get_order( $balance->get_id() );
 				$amount  = (float) $balance->get_remaining_refund_amount();
 				if ( $amount > 0 ) {
-					$refund         = self::refund_remaining( $balance, __( 'Original order cancelled', 'wpheka-edit-orders-for-woocommerce' ), $out['made'] );
+					$refund         = self::refund_remaining( $balance, __( 'Original order cancelled', 'wpheka-edit-orders-for-woocommerce' ), $out['made'], 'cancel_balance' );
 					$out['amount'] += $amount;
 					if ( ! is_wp_error( $refund ) ) {
 						$out['made'][] = Edit_Orders_For_WooCommerce_Log::money( $amount, $balance->get_currency() ) . ' on balance order ' . $balance->get_id();
@@ -373,7 +448,7 @@ class Edit_Orders_For_WooCommerce_Cancellation {
 		}
 
 		// The order may have moved on since the customer asked (shipped, refunded or cancelled by hand).
-		if ( ! in_array( $order->get_status(), array( 'pending', 'processing', 'on-hold' ), true ) ) {
+		if ( ! in_array( $order->get_status(), array( 'pending', 'processing', 'on-hold', Edit_Orders_For_WooCommerce_Hold::STATUS ), true ) ) {
 			Edit_Orders_For_WooCommerce_Log::notice(
 				sprintf( 'order %d: cancellation request closed without cancelling: the order is now %s', $order->get_id(), $order->get_status() ),
 				array(

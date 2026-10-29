@@ -152,16 +152,33 @@ class Edit_Orders_For_WooCommerce_Change_Set {
 						$address[ $address_type ] = $change[ $address_type ];
 					}
 				}
-				if ( 1 === count( $address ) ) {
-					return __( 'An address change needs a billing or shipping address.', 'wpheka-edit-orders-for-woocommerce' );
-				}
 				if ( ! empty( $change['shipping_method'] ) ) {
 					$address['shipping_method'] = sanitize_text_field( $change['shipping_method'] );
+				}
+				// A shipping method on its own is a change too (since 1.4.0): the same address, another method.
+				if ( 1 === count( $address ) ) {
+					return __( 'An address change needs a billing or shipping address.', 'wpheka-edit-orders-for-woocommerce' );
 				}
 				return $address;
 		}
 
-		return __( 'Unknown change.', 'wpheka-edit-orders-for-woocommerce' );
+		/**
+		 * Normalise a change type the plugin doesn't know. Return the change as an array
+		 * (with its `type`) to accept it, then plan it on edit_orders_for_woocommerce_plan_change.
+		 * Return a string to refuse it with that message.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array|string $result The error message "Unknown change.".
+		 * @param array        $change The raw change.
+		 */
+		$result = apply_filters( 'edit_orders_for_woocommerce_normalise_change', __( 'Unknown change.', 'wpheka-edit-orders-for-woocommerce' ), $change );
+		if ( is_array( $result ) ) {
+			$result['type'] = isset( $result['type'] ) ? sanitize_key( (string) $result['type'] ) : $type;
+			return $result;
+		}
+
+		return is_string( $result ) && '' !== $result ? $result : __( 'Unknown change.', 'wpheka-edit-orders-for-woocommerce' );
 	}
 
 	/**

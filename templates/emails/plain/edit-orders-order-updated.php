@@ -49,6 +49,16 @@ if ( ! empty( $summary['refund'] ) && (float) $summary['refund'] > 0 ) {
 	echo esc_html( html_entity_decode( $edit_orders_for_woocommerce_line ) ) . "\n\n";
 }
 
+/**
+ * After the summary, before the order details (since 1.4.0).
+ *
+ * @param WC_Order $order      Order.
+ * @param array    $data       The email's data.
+ * @param bool     $plain_text Plain text.
+ * @param WC_Email $email      Email.
+ */
+do_action( 'edit_orders_for_woocommerce_email_after_summary', $order, isset( $data ) ? (array) $data : array(), $plain_text, $email );
+
 do_action( 'woocommerce_email_order_details', $order, $sent_to_admin, $plain_text, $email );
 do_action( 'woocommerce_email_customer_details', $order, $sent_to_admin, $plain_text, $email );
 

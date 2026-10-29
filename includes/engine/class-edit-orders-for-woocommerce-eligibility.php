@@ -14,7 +14,8 @@ class Edit_Orders_For_WooCommerce_Eligibility {
 
 	/**
 	 * Statuses whose paid orders can be edited, from the settings. Final and
-	 * unpaid statuses are never allowed, whatever is saved.
+	 * unpaid statuses are never allowed, whatever is saved. While the hold is on,
+	 * Open for changes is always included: holding orders for changes is its purpose.
 	 *
 	 * @return string[]
 	 */
@@ -23,8 +24,13 @@ class Edit_Orders_For_WooCommerce_Eligibility {
 			array_map( 'sanitize_key', (array) Edit_Orders_For_WooCommerce_Settings::get( 'editable_statuses' ) ),
 			array( 'pending', 'completed', 'cancelled', 'refunded', 'failed', 'checkout-draft' )
 		);
+		$statuses = $statuses ? array_values( $statuses ) : array( 'processing', 'on-hold' );
 
-		return $statuses ? array_values( $statuses ) : array( 'processing', 'on-hold' );
+		if ( Edit_Orders_For_WooCommerce_Hold::is_on() && ! in_array( Edit_Orders_For_WooCommerce_Hold::STATUS, $statuses, true ) ) {
+			$statuses[] = Edit_Orders_For_WooCommerce_Hold::STATUS;
+		}
+
+		return $statuses;
 	}
 
 	/**
@@ -87,26 +93,30 @@ class Edit_Orders_For_WooCommerce_Eligibility {
 	/**
 	 * Can this line be changed?
 	 *
-	 * @param WC_Order      $order Order.
-	 * @param WC_Order_Item $item  Line.
+	 * @param WC_Order      $order  Order.
+	 * @param WC_Order_Item $item   Line.
+	 * @param array         $change The change asked for, if any (since 1.4.0).
+	 * @param string        $actor  staff, customer or guest (since 1.4.0).
 	 * @return true|WP_Error
 	 */
-	public static function check_item( WC_Order $order, $item ) {
+	public static function check_item( WC_Order $order, $item, array $change = array(), $actor = 'staff' ) {
+		$result = true;
+
 		if ( ! $item instanceof WC_Order_Item_Product || (int) $item->get_order_id() !== $order->get_id() ) {
+			// Not a line of this order: nothing for the filter to judge.
 			return new WP_Error( 'edit_orders_for_woocommerce_item', __( 'That item is not on this order.', 'wpheka-edit-orders-for-woocommerce' ) );
 		}
 
+		$balance = Edit_Orders_For_WooCommerce_Balance_Orders::unmatched_balance_order( $order, $item );
+
 		if ( 0 !== (int) $order->get_qty_refunded_for_item( $item->get_id() ) || 0.0 !== (float) $order->get_total_refunded_for_item( $item->get_id() ) ) {
 			/* translators: %s: product name. */
-			return new WP_Error( 'edit_orders_for_woocommerce_item_refunded', sprintf( __( '"%s" already has a refund, so it can no longer be changed.', 'wpheka-edit-orders-for-woocommerce' ), $item->get_name() ) );
-		}
-
-		// Units or a price difference paid on a balance order are fine: the plan refunds
-		// and swaps them on that balance order (see Balance_Orders::line_parts()). Unless
-		// that balance order's items can't be told apart (one made by 1.0.0).
-		$balance = Edit_Orders_For_WooCommerce_Balance_Orders::unmatched_balance_order( $order, $item );
-		if ( $balance ) {
-			return new WP_Error(
+			$result = new WP_Error( 'edit_orders_for_woocommerce_item_refunded', sprintf( __( '"%s" already has a refund, so it can no longer be changed.', 'wpheka-edit-orders-for-woocommerce' ), $item->get_name() ) );
+		} elseif ( $balance ) {
+			// Units or a price difference paid on a balance order are fine: the plan refunds
+			// and swaps them on that balance order (see Balance_Orders::line_parts()). Unless
+			// that balance order's items can't be told apart (one made by 1.0.0).
+			$result = new WP_Error(
 				'edit_orders_for_woocommerce_item_balance',
 				sprintf(
 					/* translators: 1: product name, 2: balance order number. */
@@ -115,14 +125,23 @@ class Edit_Orders_For_WooCommerce_Eligibility {
 					$balance->get_order_number()
 				)
 			);
-		}
-
-		if ( ! $item->get_product() ) {
+		} elseif ( ! $item->get_product() ) {
 			/* translators: %s: product name. */
-			return new WP_Error( 'edit_orders_for_woocommerce_item_product', sprintf( __( 'The product for "%s" no longer exists.', 'wpheka-edit-orders-for-woocommerce' ), $item->get_name() ) );
+			$result = new WP_Error( 'edit_orders_for_woocommerce_item_product', sprintf( __( 'The product for "%s" no longer exists.', 'wpheka-edit-orders-for-woocommerce' ), $item->get_name() ) );
 		}
 
-		return true;
+		/**
+		 * Final say on whether a line can be changed.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param true|WP_Error         $result True when allowed.
+		 * @param WC_Order              $order  Order.
+		 * @param WC_Order_Item_Product $item   Line.
+		 * @param array                 $change The change asked for (empty when only listing what can change).
+		 * @param string                $actor  staff, customer or guest.
+		 */
+		return apply_filters( 'edit_orders_for_woocommerce_can_change_item', $result, $order, $item, $change, $actor );
 	}
 
 	/**

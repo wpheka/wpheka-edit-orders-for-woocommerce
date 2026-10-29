@@ -53,6 +53,19 @@ class Edit_Orders_For_WooCommerce_Orders_List {
 
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue' ) );
 		add_action( 'update_option_' . Edit_Orders_For_WooCommerce_Settings::OPTION, array( __CLASS__, 'reset' ) );
+		add_action( 'current_screen', array( __CLASS__, 'sweep' ) );
+	}
+
+	/**
+	 * Opening the Orders screen releases held orders whose time has passed, in case
+	 * scheduled actions don't run on this site.
+	 *
+	 * @param WP_Screen $screen Screen.
+	 */
+	public static function sweep( $screen ) {
+		if ( $screen instanceof WP_Screen && in_array( $screen->id, array( 'woocommerce_page_wc-orders', 'edit-shop_order' ), true ) ) {
+			Edit_Orders_For_WooCommerce_Hold::sweep();
+		}
 	}
 
 	/**
@@ -118,7 +131,7 @@ class Edit_Orders_For_WooCommerce_Orders_List {
 			return self::$open_ids;
 		}
 
-		$since  = time() - Edit_Orders_For_WooCommerce_Settings::window_seconds();
+		$since  = time() - Edit_Orders_For_WooCommerce_Customer_Rules::window_max_seconds();
 		$common = array(
 			'type'    => 'shop_order',
 			'status'  => self::statuses(),

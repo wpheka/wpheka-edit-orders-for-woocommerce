@@ -43,6 +43,16 @@ foreach ( $changes as $edit_orders_for_woocommerce_change ) {
 echo "\n" . esc_html__( 'Pay the difference:', 'wpheka-edit-orders-for-woocommerce' ) . ' ' . esc_url_raw( $pay_url ) . "\n\n";
 echo esc_html__( 'Until it is paid, your order stays as you first placed it.', 'wpheka-edit-orders-for-woocommerce' ) . "\n\n";
 
+/**
+ * After the summary, before the order details (since 1.4.0).
+ *
+ * @param WC_Order $order      Order.
+ * @param array    $data       The email's data.
+ * @param bool     $plain_text Plain text.
+ * @param WC_Email $email      Email.
+ */
+do_action( 'edit_orders_for_woocommerce_email_after_summary', $order, isset( $data ) ? (array) $data : array(), $plain_text, $email );
+
 do_action( 'woocommerce_email_order_details', $order, $sent_to_admin, $plain_text, $email );
 
 if ( $additional_content ) {

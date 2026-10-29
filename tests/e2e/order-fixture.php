@@ -150,4 +150,23 @@ if ( 'create' === $eo_command ) {
 } elseif ( 'hpos' === $eo_command ) {
 	// Prints whether HPOS is on, for a test that switches it.
 	WP_CLI::log( 'HPOS=' . ( \Automattic\WooCommerce\Utilities\OrderUtil::custom_orders_table_usage_is_enabled() ? 'on' : 'off' ) );
+} elseif ( 'hold' === $eo_command ) {
+	// The "Open for changes" hold (1.4.0): hold on|off.
+	$eo_on = isset( $args[1] ) && 'on' === $args[1];
+	update_option( Edit_Orders_For_WooCommerce_Settings::OPTION, array_merge( (array) get_option( Edit_Orders_For_WooCommerce_Settings::OPTION, array() ), array( 'hold_enabled' => $eo_on ? 'yes' : 'no' ) ) );
+	WP_CLI::log( 'HOLD=' . ( $eo_on ? 'on' : 'off' ) );
+} elseif ( 'status' === $eo_command ) {
+	// An order's status: status <id> prints STATUS=<status>.
+	$eo_order = wc_get_order( isset( $args[1] ) ? (int) $args[1] : 0 );
+	WP_CLI::log( 'STATUS=' . ( $eo_order ? $eo_order->get_status() : 'none' ) );
+} elseif ( 'fake-pro' === $eo_command ) {
+	// The dev-only fake Pro extension (tests/env/mu-plugins): fake-pro on|off.
+	$eo_on = isset( $args[1] ) && 'on' === $args[1];
+	if ( $eo_on ) {
+		update_option( 'edit_orders_test_fake_pro', 'yes', false );
+	} else {
+		delete_option( 'edit_orders_test_fake_pro' );
+		delete_option( 'edit_orders_test_fake_pro_value' );
+	}
+	WP_CLI::log( 'FAKE_PRO=' . ( $eo_on ? 'on' : 'off' ) . ' VALUE=' . get_option( 'edit_orders_test_fake_pro_value', '' ) );
 }

@@ -230,7 +230,39 @@ class Edit_Orders_For_WooCommerce_Frontend {
 					// Only the store's own reasons are offered: anything else wasn't chosen in the form.
 					$reason = '';
 				}
-				$result = Edit_Orders_For_WooCommerce_Cancellation::request( $order, $reason, $actor );
+
+				/**
+				 * Show something else instead of cancelling, for example a retention offer.
+				 * Return a panel state (an array with a `type` the panel prints on
+				 * edit_orders_for_woocommerce_panel_state) to stop here, or null to go on.
+				 *
+				 * @since 1.4.0
+				 *
+				 * @param array|null $state  Null.
+				 * @param WC_Order   $order  Order.
+				 * @param array      $data   Posted data.
+				 * @param string     $actor  customer or guest.
+				 * @param string     $reason The reason, checked.
+				 */
+				$intercept = apply_filters( 'edit_orders_for_woocommerce_cancel_intercept', null, $order, $data, $actor, $reason );
+				if ( is_array( $intercept ) ) {
+					return wp_parse_args( $intercept, self::error( '', $action ) );
+				}
+
+				/**
+				 * More about a cancellation request, kept with it (for example the lines of a
+				 * partial cancellation).
+				 *
+				 * @since 1.4.0
+				 *
+				 * @param array    $details Details.
+				 * @param WC_Order $order   Order.
+				 * @param array    $data    Posted data.
+				 * @param string   $actor   customer or guest.
+				 */
+				$details = (array) apply_filters( 'edit_orders_for_woocommerce_cancel_request_details', array(), $order, $data, $actor );
+
+				$result = Edit_Orders_For_WooCommerce_Cancellation::request( $order, $reason, $actor, $details );
 				if ( is_wp_error( $result ) ) {
 					return self::error( $result->get_error_message(), $action );
 				}
@@ -242,24 +274,67 @@ class Edit_Orders_For_WooCommerce_Frontend {
 				);
 
 			case 'address':
+				return self::change_order( $order, $data, $actor, $action, self::address_changes( $order, $data ) );
+
 			case 'swap':
-				return self::change_order( $order, $data, $actor, $action );
+				return self::change_order( $order, $data, $actor, $action, self::swap_changes( $order, $data ) );
+		}
+
+		/**
+		 * Changes for a customer action the plugin doesn't know. Return the raw changes
+		 * (see Edit_Orders_For_WooCommerce_Change_Set) to run them through the same
+		 * preview, confirmation, fingerprint check, apply and redirect as the built-in
+		 * actions, or null when the action isn't a change set.
+		 *
+		 * The action must be offered through edit_orders_for_woocommerce_customer_actions,
+		 * so Customer_Rules::can() allowed it before this runs.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array|null $changes Null.
+		 * @param string     $action  Action.
+		 * @param WC_Order   $order   Order.
+		 * @param array      $data    Posted data.
+		 * @param string     $actor   customer or guest.
+		 */
+		$changes = apply_filters( 'edit_orders_for_woocommerce_customer_changes', null, $action, $order, $data, $actor );
+		if ( is_array( $changes ) ) {
+			return self::change_order( $order, $data, $actor, $action, $changes );
+		}
+
+		/**
+		 * Carry out a customer action that isn't a change set, for example accepting an
+		 * offer. Return a result in the panel's shape (type success, error or preview,
+		 * message, redirect), or null.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array|null $result Null.
+		 * @param string     $action Action.
+		 * @param WC_Order   $order  Order.
+		 * @param array      $data   Posted data.
+		 * @param string     $actor  customer or guest.
+		 */
+		$result = apply_filters( 'edit_orders_for_woocommerce_customer_action', null, $action, $order, $data, $actor );
+		if ( is_array( $result ) ) {
+			return wp_parse_args( $result, self::error( '', $action ) );
 		}
 
 		return self::error( __( 'Unknown request.', 'wpheka-edit-orders-for-woocommerce' ), $action );
 	}
 
 	/**
-	 * Address change or variation swap: preview first, then confirm.
+	 * A change set from the customer (address change, variation swap, or an action added
+	 * through edit_orders_for_woocommerce_customer_changes): preview first, then confirm.
 	 *
-	 * @param WC_Order $order  Order.
-	 * @param array    $data   Posted data.
-	 * @param string   $actor  Actor.
-	 * @param string   $action address or swap.
+	 * @param WC_Order $order   Order.
+	 * @param array    $data    Posted data.
+	 * @param string   $actor   Actor.
+	 * @param string   $action  Action.
+	 * @param array[]  $changes Raw changes.
 	 * @return array
 	 */
-	private static function change_order( WC_Order $order, array $data, $actor, $action ) {
-		$changes = 'address' === $action ? self::address_changes( $order, $data ) : self::swap_changes( $order, $data );
+	private static function change_order( WC_Order $order, array $data, $actor, $action, array $changes ) {
 		if ( ! $changes ) {
 			return self::error( __( 'Nothing was changed.', 'wpheka-edit-orders-for-woocommerce' ), $action );
 		}
@@ -284,20 +359,62 @@ class Edit_Orders_For_WooCommerce_Frontend {
 			// The confirmed change continues the preview's run in the log.
 			$fields['run'] = Edit_Orders_For_WooCommerce_Log::run_id();
 
+			$preview = array(
+				'changes'     => $plan->get_descriptions(),
+				'refund'      => $plan->get_refund_amount(),
+				'balance'     => $plan->get_balance_estimate( $order ),
+				// Unpaid cash on delivery: no pay page and no refund, only a new amount to collect.
+				'on_delivery' => Edit_Orders_For_WooCommerce_Eligibility::is_pay_on_delivery( $order ),
+				'fields'      => $fields,
+			);
+
+			/**
+			 * What the customer's preview shows. Keep `fields`: the confirm form repeats them.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param array                                       $preview { changes, refund, balance, on_delivery, fields }.
+			 * @param Edit_Orders_For_WooCommerce_Settlement_Plan $plan    Plan.
+			 * @param WC_Order                                    $order   Order.
+			 * @param string                                      $action  Action.
+			 */
+			$preview = (array) apply_filters( 'edit_orders_for_woocommerce_customer_preview', $preview, $plan, $order, $action );
+
 			return array(
 				'type'     => 'preview',
 				'action'   => $action,
 				'message'  => '',
 				'redirect' => '',
-				'preview'  => array(
-					'changes'     => $plan->get_descriptions(),
-					'refund'      => $plan->get_refund_amount(),
-					'balance'     => $plan->get_balance_estimate( $order ),
-					// Unpaid cash on delivery: no pay page and no refund, only a new amount to collect.
-					'on_delivery' => Edit_Orders_For_WooCommerce_Eligibility::is_pay_on_delivery( $order ),
-					'fields'      => $fields,
-				),
+				'preview'  => $preview,
 			);
+		}
+
+		// Only worked out when something listens: building the plan costs a few queries.
+		if ( has_filter( 'edit_orders_for_woocommerce_customer_change_intercept' ) ) {
+			// In the preview's run, as the apply below is.
+			Edit_Orders_For_WooCommerce_Log::start_run( isset( $data['run'] ) ? sanitize_key( $data['run'] ) : '' );
+			$plan   = Edit_Orders_For_WooCommerce_Settlement_Executor::plan( $order, $changes, $actor );
+			$expect = isset( $data['expect'] ) ? sanitize_key( $data['expect'] ) : '';
+			// A plan that differs from the preview goes on to apply() below, which refuses it.
+			if ( ! is_wp_error( $plan ) && ( '' === $expect || hash_equals( $plan->fingerprint(), $expect ) ) ) {
+				/**
+				 * Stop a confirmed customer change before it is applied, for example to send it
+				 * to the store for approval. Return a panel result (type success, error or
+				 * another state, message) to stop, or null to apply as usual.
+				 *
+				 * @since 1.4.0
+				 *
+				 * @param array|null                                  $result  Null.
+				 * @param WC_Order                                    $order   Order.
+				 * @param array[]                                     $changes Raw changes.
+				 * @param Edit_Orders_For_WooCommerce_Settlement_Plan $plan    Plan, as previewed.
+				 * @param string                                      $actor   customer or guest.
+				 */
+				$intercepted = apply_filters( 'edit_orders_for_woocommerce_customer_change_intercept', null, $order, $changes, $plan, $actor );
+				if ( is_array( $intercepted ) ) {
+					return wp_parse_args( $intercepted, self::error( '', $action ) );
+				}
+			}
 		}
 
 		$result = Edit_Orders_For_WooCommerce_Settlement_Executor::apply(
@@ -337,8 +454,20 @@ class Edit_Orders_For_WooCommerce_Frontend {
 
 		if ( 'balance_due' === $result['status'] && $balance ) {
 			// The customer is here: take them straight to paying the difference.
-			$out             = self::success( __( 'Pay the difference to complete your change.', 'wpheka-edit-orders-for-woocommerce' ), $action );
-			$out['redirect'] = $balance->get_checkout_payment_url();
+			$out = self::success( __( 'Pay the difference to complete your change.', 'wpheka-edit-orders-for-woocommerce' ), $action );
+
+			/**
+			 * Where the customer goes to pay for their change.
+			 *
+			 * @since 1.4.0
+			 *
+			 * @param string   $url     The balance order's pay page.
+			 * @param WC_Order $balance Balance order.
+			 * @param WC_Order $order   Original order.
+			 * @param string   $actor   customer or guest.
+			 * @param array    $data    Posted data.
+			 */
+			$out['redirect'] = (string) apply_filters( 'edit_orders_for_woocommerce_balance_redirect', $balance->get_checkout_payment_url(), $balance, $order, $actor, $data );
 			return $out;
 		}
 
@@ -418,7 +547,8 @@ class Edit_Orders_For_WooCommerce_Frontend {
 			}
 		}
 
-		if ( ! empty( $data['shipping_method'] ) ) {
+		// A method only goes with a new address here: choosing another method on its own isn't offered to customers.
+		if ( count( $change ) > 1 && ! empty( $data['shipping_method'] ) ) {
 			$change['shipping_method'] = sanitize_text_field( $data['shipping_method'] );
 		}
 
@@ -489,6 +619,13 @@ class Edit_Orders_For_WooCommerce_Frontend {
 			return;
 		}
 
+		// Held orders whose time has passed, in case scheduled actions don't run here.
+		Edit_Orders_For_WooCommerce_Hold::sweep();
+		$order = wc_get_order( $order->get_id() );
+		if ( ! $order instanceof WC_Order ) {
+			return;
+		}
+
 		$panel = self::panel_args( $order, 'guest' === $actor ? $key : '' );
 		if ( ! $panel ) {
 			return;
@@ -544,14 +681,18 @@ class Edit_Orders_For_WooCommerce_Frontend {
 		$pending = 'pending' === $order->get_meta( Edit_Orders_For_WooCommerce_Cancellation::STATUS_META );
 
 		if ( ! $actions && ! $state && '' === $message && ! $pending && ! $excluded ) {
-			return null;
+			/** This filter is documented below. */
+			$args = apply_filters( 'edit_orders_for_woocommerce_panel_args', null, $order, $key );
+
+			return is_array( $args ) ? $args : null;
 		}
 
-		return array(
+		$args = array(
 			'order'           => $order,
 			'order_key'       => $key,
 			'actions'         => $actions,
 			'seconds_left'    => Edit_Orders_For_WooCommerce_Customer_Rules::seconds_left( $order ),
+			'held'            => Edit_Orders_For_WooCommerce_Hold::is_held( $order ),
 			'excluded'        => $excluded,
 			'address_types'   => self::address_types(),
 			'cancel_pending'  => $pending,
@@ -565,6 +706,21 @@ class Edit_Orders_For_WooCommerce_Frontend {
 			'state'           => $state,
 			'message'         => $message,
 		);
+
+		/**
+		 * Everything the customer panel template gets. Also asked when the plugin has
+		 * nothing to show (with null): return the full set of arguments to show the panel
+		 * anyway, for actions only an extension offers.
+		 *
+		 * @since 1.4.0
+		 *
+		 * @param array|null $args  Template arguments, or null when there is nothing to show.
+		 * @param WC_Order   $order Order.
+		 * @param string     $key   Order key for guests, or empty.
+		 */
+		$args = apply_filters( 'edit_orders_for_woocommerce_panel_args', $args, $order, $key );
+
+		return is_array( $args ) ? $args : null;
 	}
 
 	/**

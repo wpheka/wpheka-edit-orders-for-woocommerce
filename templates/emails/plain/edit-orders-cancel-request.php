@@ -27,6 +27,16 @@ if ( ! empty( $data['reason'] ) ) {
 	echo esc_html( sprintf( __( 'Reason: %s', 'wpheka-edit-orders-for-woocommerce' ), $data['reason'] ) ) . "\n\n";
 }
 echo esc_html__( 'Approve or decline the request:', 'wpheka-edit-orders-for-woocommerce' ) . ' ' . esc_url_raw( admin_url( 'admin.php?page=edit-orders-for-woocommerce' ) ) . "\n\n";
+/**
+ * After the summary, before the order details (since 1.4.0).
+ *
+ * @param WC_Order $order      Order.
+ * @param array    $data       The email's data.
+ * @param bool     $plain_text Plain text.
+ * @param WC_Email $email      Email.
+ */
+do_action( 'edit_orders_for_woocommerce_email_after_summary', $order, isset( $data ) ? (array) $data : array(), $plain_text, $email );
+
 do_action( 'woocommerce_email_order_details', $order, $sent_to_admin, $plain_text, $email );
 
 if ( $additional_content ) {
