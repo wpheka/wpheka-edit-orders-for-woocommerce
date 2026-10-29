@@ -4,7 +4,7 @@ Tags: edit order, change order, cancel order, order editing, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1.4
 Requires PHP: 7.4
-Stable tag: 1.4.0
+Stable tag: 1.4.1
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -131,6 +131,11 @@ The plugin does not write names, emails, phone numbers or addresses to the log. 
 
 == Changelog ==
 
+= 1.4.1 =
+* Improved: notices from WordPress and other plugins no longer show on the WPHEKA > Edit Orders page, where they printed above the header and then jumped into place. They still show on every other screen.
+* Improved: on the Activity tab, the result of approving or declining a cancellation shows with an icon. A decision that fails shows in red and is announced by screen readers.
+* Fixed: on sites in a right-to-left language the options under a switch on the Settings tab were indented on the wrong side.
+
 = 1.4.0 =
 * New: hold new orders while customers can change them (WPHEKA > Edit Orders > Settings > Customer changes, off by default). Paid orders wait in a new status, Open for changes, instead of Processing. They move to Processing once when the time for changes ends, when the customer says all is good, when a tracking number or fulfilment is added or when you click "Release now" in the Edit order box. Cash on delivery orders follow the same switch. Customers see "You can still change this order until 3:40 pm." Turning the hold off, deactivating or deleting the plugin moves every held order to Processing.
 * New: two more numbers on the Edit Orders page: cancellations (by customers, and requests declined) and orders customers can change right now. The customer changes number says how many customers confirmed their order as it was.
@@ -179,6 +184,9 @@ The plugin does not write names, emails, phone numbers or addresses to the log. 
 * First release.
 
 == Upgrade Notice ==
+
+= 1.4.1 =
+Keeps other plugins' notices off the Edit Orders page and fixes the right-to-left settings layout.
 
 = 1.4.0 =
 Adds Open for changes (off by default): paid orders wait while customers can still change them, then move to Processing. Also new numbers on the Edit Orders page and hooks for extensions.

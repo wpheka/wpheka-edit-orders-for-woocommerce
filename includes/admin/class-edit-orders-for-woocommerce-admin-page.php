@@ -83,6 +83,10 @@ class Edit_Orders_For_WooCommerce_Admin_Page {
 		$hook = Menu::add_page( __( 'Edit Orders', 'wpheka-edit-orders-for-woocommerce' ), $label, Edit_Orders_For_WooCommerce_Admin::CAPABILITY, self::PAGE, array( __CLASS__, 'render' ), Icons::menu_icon() );
 
 		self::$hook = is_string( $hook ) ? $hook : '';
+		if ( '' !== self::$hook ) {
+			// Notices from WordPress and other plugins would print above the header and then jump into place.
+			add_action( 'load-' . self::$hook, array( Page::class, 'quiet_notices' ) );
+		}
 	}
 
 	/**

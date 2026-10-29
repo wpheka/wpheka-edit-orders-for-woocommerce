@@ -2,14 +2,14 @@
 # This file is distributed under the GPLv3 or later.
 msgid ""
 msgstr ""
-"Project-Id-Version: WPHEKA Edit Orders for WooCommerce 1.4.0\n"
+"Project-Id-Version: WPHEKA Edit Orders for WooCommerce 1.4.1\n"
 "Report-Msgid-Bugs-To: https://wordpress.org/support/plugin/edit-orders-for-woocommerce\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-29T12:09:06+00:00\n"
+"POT-Creation-Date: 2026-10-29T15:27:09+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.12.0\n"
 "X-Domain: wpheka-edit-orders-for-woocommerce\n"
@@ -66,214 +66,214 @@ msgstr ""
 msgid "That request could not be handled. It may have been answered already."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:222
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:230
 msgid "Cancellation requests"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:223
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:231
 msgid "Customers asking to cancel, waiting for your decision."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:236
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:244
 msgid "No requests waiting."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:236
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:244
 msgid "When a customer asks to cancel, the request appears here and in the order."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:240
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:343
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:248
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:351
 msgid "Order"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:240
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:248
 msgid "Asked"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:240
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:248
 msgid "Reason"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:240
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:248
 msgid "Total"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:240
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:248
 msgid "Decision"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:247
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:255
 msgid "None given"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:269
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:277
 #: includes/admin/class-edit-orders-for-woocommerce-admin.php:165
 msgid "Approve and refund"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:270
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:278
 msgid "Message to the customer"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:270
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:278
 msgid "Message to the customer (optional, sent when declining)"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:271
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:279
 msgid "Decline"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:285
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:293
 #: includes/engine/class-edit-orders-for-woocommerce-settlement-executor.php:540
 msgid "Order edited"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:286
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:294
 msgid "Balance order created"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:287
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:295
 msgid "Balance paid, changes applied"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:288
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:296
 msgid "Balance paid, changes failed"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:289
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:297
 #: includes/emails/class-edit-orders-for-woocommerce-email-cancel-request.php:21
 #: includes/emails/class-edit-orders-for-woocommerce-email-cancel-request.php:44
 msgid "Cancellation requested"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:290
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:298
 msgid "Cancelled"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:291
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:299
 msgid "Cancellation declined"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:292
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:300
 msgid "Order note changed"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:293
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:301
 msgid "Customer confirmed the order"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:294
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:302
 msgid "Open for changes"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:295
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:303
 msgid "Released to Processing"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:311
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:319
 msgid "Store"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:312
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:320
 msgid "Customer"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:313
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:321
 msgid "Guest"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:314
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:322
 msgid "Automatic"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:317
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:318
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:325
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:326
 msgid "The time for changes ended."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:319
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:327
 msgid "The customer confirmed the order as it is."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:320
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:328
 msgid "A tracking number or fulfilment was added."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:321
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:329
 msgid "Released by the store."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:322
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:330
 msgid "The hold was turned off."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:323
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:331
 msgid "The plugin was deactivated."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:326
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:115
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:334
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:119
 msgid "Activity"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:327
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:335
 msgid "Every change made with Edit Orders, by you or by customers."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:329
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:343
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:337
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:351
 msgid "Change"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:329
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:337
 msgid "All changes"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:333
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:341
 msgid "From"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:334
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:342
 msgid "To"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:335
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:343
 msgid "Filter"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:339
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:347
 msgid "No changes yet."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:339
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:347
 msgid "Edits, refunds, pay links and cancellations appear here as they happen."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:343
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:351
 msgid "When"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:343
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:351
 msgid "By"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:343
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:351
 msgid "Details"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:343
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:351
 msgid "Amount"
 msgstr ""
 
 #. translators: %s: date and time.
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:354
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:362
 #, php-format
 msgid "Until %s."
 msgstr ""
 
 #. translators: %s: reason.
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:359
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:367
 #: includes/admin/class-edit-orders-for-woocommerce-admin.php:163
 #: templates/emails/edit-orders-cancel-request.php:34
 #: templates/emails/plain/edit-orders-cancel-request.php:27
@@ -281,233 +281,234 @@ msgstr ""
 msgid "Reason: %s"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-activity.php:378
+#: includes/admin/class-edit-orders-for-woocommerce-activity.php:386
 msgid "Activity pages"
 msgstr ""
 
 #: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:78
 #: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:83
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:254
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:291
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:258
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:295
 #: includes/admin/class-edit-orders-for-woocommerce-settings-page.php:23
 #: includes/admin/class-edit-orders-for-woocommerce-system-status.php:168
 msgid "Edit Orders"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:109
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:113
 #: includes/admin/class-edit-orders-for-woocommerce-admin.php:69
 msgid "Settings"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:121
-#: includes/wpheka-ui/class-page.php:81
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:125
+#: includes/wpheka-ui/class-page.php:167
 msgid "Help"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:179
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:183
 msgid "You are not allowed to change these settings."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:250
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:254
 #: includes/wpheka-ui/class-catalogue.php:31
 msgid "Edit Orders for WooCommerce"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:252
-#: includes/wpheka-ui/class-page.php:228
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:256
+#: includes/wpheka-ui/class-page.php:314
 msgid "Free"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:253
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:257
 msgid "Edit paid orders and settle the difference automatically."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:256
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:260
 msgid "Docs"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:257
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:261
 msgid "Support"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:258
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:489
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:262
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:493
 msgid "What's new"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:260
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:264
 msgid "Rate on WordPress.org"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:308
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:312
 msgid "Orders edited"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:311
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:315
 msgid "Last 30 days"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:314
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:318
 msgid "Refunded"
 msgstr ""
 
 #. translators: %s: number of refunds.
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:319
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:323
 #, php-format
 msgid "%s refund, made automatically"
 msgid_plural "%s refunds, made automatically"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:322
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:326
 msgid "Pay links"
 msgstr ""
 
 #. translators: %s: number of paid pay links.
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:325
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:329
 #, php-format
 msgid "/ %s paid"
 msgstr ""
 
 #. translators: %s: amount collected.
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:327
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:331
 #, php-format
 msgid "%s collected"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:331
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:435
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:335
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:439
 #: includes/admin/class-edit-orders-for-woocommerce-settings-form.php:334
 msgid "Customer changes"
 msgstr ""
 
 #. translators: %s: number of customers who confirmed their order as it was.
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:337
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:341
 #, php-format
 msgid "Made by customers themselves. %s said all good."
 msgid_plural "Made by customers themselves. %s said all good."
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:338
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:342
 msgid "Made by customers themselves"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:341
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:440
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:345
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:444
 #: includes/admin/class-edit-orders-for-woocommerce-settings-form.php:438
 #: includes/admin/class-edit-orders-for-woocommerce-settings-form.php:443
 msgid "Cancellations"
 msgstr ""
 
 #. translators: 1: cancellations by customers, 2: cancellation requests declined.
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:346
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:350
 #, php-format
 msgid "%1$s by customers, %2$s declined"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:352
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:356
 msgid "Open for changes now"
 msgstr ""
 
 #. translators: %s: number of orders held as Open for changes.
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:358
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:362
 #, php-format
 msgid "%s held"
 msgid_plural "%s held"
 msgstr[0] ""
 msgstr[1] ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:359
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:363
 msgid "Customers can still change these"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:382
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:386
 msgid "Getting started"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:384
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:388
 msgid "(done)"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:384
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:388
 msgid "(to do)"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:388
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:392
 msgid "Open an order"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:389
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:393
 msgid "Hide getting started"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:408
-#: includes/wpheka-ui/class-page.php:252
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:412
+#: includes/wpheka-ui/class-page.php:338
 msgid "Save changes"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:409
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:413
 msgid "Review and help"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:410
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:414
 msgid "Enjoying Edit Orders?"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:410
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:414
 msgid "A quick review helps other store owners find it and keeps it improving."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:413
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:417
 msgid "Read the documentation"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:414
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:418
 msgid "Ask in the support forum"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:430
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:434
 #: includes/admin/class-edit-orders-for-woocommerce-settings-form.php:314
 msgid "Order editing"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:445
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:449
 #: includes/admin/class-edit-orders-for-woocommerce-settings-form.php:480
 msgid "Emails"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:450
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:454
 #: includes/admin/class-edit-orders-for-woocommerce-settings-form.php:496
 msgid "Advanced"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:487
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:491
 msgid "Documentation"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:487
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:491
 msgid "How each setting works, with answers to common questions."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:488
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:492
 msgid "Support forum"
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:488
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:492
 msgid "Ask a question. The developers who built the plugin answer."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:489
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:493
 msgid "Every change in each version, in plain words."
 msgstr ""
 
-#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:493
+#: includes/admin/class-edit-orders-for-woocommerce-admin-page.php:497
 #: includes/wpheka-ui/class-catalogue.php:121
-#: includes/wpheka-ui/class-page.php:83
-#: includes/wpheka-ui/class-page.php:103
-#: includes/wpheka-ui/class-page.php:179
-#: includes/wpheka-ui/class-page.php:192
+#: includes/wpheka-ui/class-page.php:129
+#: includes/wpheka-ui/class-page.php:169
+#: includes/wpheka-ui/class-page.php:189
+#: includes/wpheka-ui/class-page.php:265
+#: includes/wpheka-ui/class-page.php:278
 msgid "(opens in a new tab)"
 msgstr ""
 
@@ -614,7 +615,7 @@ msgid "Preview changes"
 msgstr ""
 
 #: includes/admin/class-edit-orders-for-woocommerce-admin.php:288
-#: includes/wpheka-ui/class-page.php:251
+#: includes/wpheka-ui/class-page.php:337
 msgid "Discard"
 msgstr ""
 
@@ -1714,34 +1715,34 @@ msgstr ""
 msgid "You are not allowed to change this order."
 msgstr ""
 
-#: includes/engine/class-edit-orders-for-woocommerce-hold.php:545
+#: includes/engine/class-edit-orders-for-woocommerce-hold.php:549
 msgid "Released to Processing: the customer confirmed the order as it is."
 msgstr ""
 
-#: includes/engine/class-edit-orders-for-woocommerce-hold.php:547
+#: includes/engine/class-edit-orders-for-woocommerce-hold.php:551
 msgid "Released to Processing: a tracking number or fulfilment was added."
 msgstr ""
 
 #. translators: %s: name of the user.
-#: includes/engine/class-edit-orders-for-woocommerce-hold.php:551
+#: includes/engine/class-edit-orders-for-woocommerce-hold.php:555
 #, php-format
 msgid "Released to Processing by %s."
 msgstr ""
 
 #. translators: %s: name of the user.
-#: includes/engine/class-edit-orders-for-woocommerce-hold.php:551
+#: includes/engine/class-edit-orders-for-woocommerce-hold.php:555
 msgid "Released to Processing by the store."
 msgstr ""
 
-#: includes/engine/class-edit-orders-for-woocommerce-hold.php:553
+#: includes/engine/class-edit-orders-for-woocommerce-hold.php:557
 msgid "Released to Processing: the hold was turned off."
 msgstr ""
 
-#: includes/engine/class-edit-orders-for-woocommerce-hold.php:555
+#: includes/engine/class-edit-orders-for-woocommerce-hold.php:559
 msgid "Released to Processing: Edit Orders for WooCommerce was deactivated."
 msgstr ""
 
-#: includes/engine/class-edit-orders-for-woocommerce-hold.php:558
+#: includes/engine/class-edit-orders-for-woocommerce-hold.php:562
 msgid "Released to Processing: the time for changes ended."
 msgstr ""
 
@@ -2008,43 +2009,43 @@ msgid "Unknown request."
 msgstr ""
 
 #: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:339
-#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:490
+#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:492
 msgid "Nothing was changed."
 msgstr ""
 
-#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:455
+#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:457
 msgid "Pay the difference to complete your change."
 msgstr ""
 
-#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:472
+#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:474
 msgid "Your order has been updated. We have emailed you the details."
 msgstr ""
 
 #. translators: 1: old note, 2: new note.
-#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:495
+#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:497
 #, php-format
 msgid "The customer changed the order note from \"%1$s\" to \"%2$s\"."
 msgstr ""
 
-#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:513
+#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:515
 msgid "Order note changed."
 msgstr ""
 
-#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:518
+#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:520
 msgid "Your order note has been updated."
 msgstr ""
 
-#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:799
+#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:801
 msgid "Change or cancel"
 msgstr ""
 
 #. translators: %s: date and time the window closes.
-#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:826
+#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:828
 #, php-format
 msgid "Need to change or cancel this order? You can do it until %s."
 msgstr ""
 
-#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:835
+#: includes/frontend/class-edit-orders-for-woocommerce-frontend.php:837
 msgid "Change or cancel your order"
 msgstr ""
 
@@ -2149,11 +2150,11 @@ msgstr ""
 msgid "View"
 msgstr ""
 
-#: includes/wpheka-ui/class-fields.php:451
+#: includes/wpheka-ui/class-fields.php:453
 msgid "No settings match"
 msgstr ""
 
-#: includes/wpheka-ui/class-fields.php:451
+#: includes/wpheka-ui/class-fields.php:453
 msgid "Try another word, or clear the search to see every setting."
 msgstr ""
 
@@ -2193,77 +2194,81 @@ msgstr ""
 msgid "%s days"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:130
-msgid "At a glance"
-msgstr ""
-
-#: includes/wpheka-ui/class-page.php:160
-msgid "Settings sections"
-msgstr ""
-
-#: includes/wpheka-ui/class-page.php:162
-msgid "Search settings"
-msgstr ""
-
-#: includes/wpheka-ui/class-page.php:179
-msgid "Leave a review"
-msgstr ""
-
-#: includes/wpheka-ui/class-page.php:180
-msgid "Takes about a minute on WordPress.org"
-msgstr ""
-
-#: includes/wpheka-ui/class-page.php:190
-msgid "Need a hand?"
+#: includes/wpheka-ui/class-page.php:132
+msgid "Dismiss this notice"
 msgstr ""
 
 #: includes/wpheka-ui/class-page.php:216
+msgid "At a glance"
+msgstr ""
+
+#: includes/wpheka-ui/class-page.php:246
+msgid "Settings sections"
+msgstr ""
+
+#: includes/wpheka-ui/class-page.php:248
+msgid "Search settings"
+msgstr ""
+
+#: includes/wpheka-ui/class-page.php:265
+msgid "Leave a review"
+msgstr ""
+
+#: includes/wpheka-ui/class-page.php:266
+msgid "Takes about a minute on WordPress.org"
+msgstr ""
+
+#: includes/wpheka-ui/class-page.php:276
+msgid "Need a hand?"
+msgstr ""
+
+#: includes/wpheka-ui/class-page.php:302
 msgid "More from WPHEKA"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:217
+#: includes/wpheka-ui/class-page.php:303
 msgid "WooCommerce plugins trusted since 2017, with 64,000+ downloads."
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:218
+#: includes/wpheka-ui/class-page.php:304
 msgid "Previous plugins"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:219
+#: includes/wpheka-ui/class-page.php:305
 msgid "Next plugins"
 msgstr ""
 
 #. translators: %s: WPHEKA link.
-#: includes/wpheka-ui/class-page.php:241
+#: includes/wpheka-ui/class-page.php:327
 #, php-format
 msgid "Made with care by %s · WooCommerce plugins since 2017"
 msgstr ""
 
 #. translators: %s: plugin name.
-#: includes/wpheka-ui/class-page.php:245
+#: includes/wpheka-ui/class-page.php:331
 #, php-format
 msgid "Enjoying %s?"
 msgstr ""
 
 #. translators: %s: plugin name.
-#: includes/wpheka-ui/class-page.php:245
+#: includes/wpheka-ui/class-page.php:331
 msgid "Rate it"
 msgstr ""
 
 #. translators: %s: plugin name.
-#: includes/wpheka-ui/class-page.php:245
+#: includes/wpheka-ui/class-page.php:331
 msgid "five stars on WordPress.org (opens in a new tab)"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:250
+#: includes/wpheka-ui/class-page.php:336
 msgid "Unsaved changes"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:259
+#: includes/wpheka-ui/class-page.php:345
 msgid "Dismiss"
 msgstr ""
 
-#: includes/wpheka-ui/class-page.php:263
+#: includes/wpheka-ui/class-page.php:349
 msgid "Settings saved"
 msgstr ""
 
@@ -2589,6 +2594,6 @@ msgstr ""
 msgid "Ask to cancel"
 msgstr ""
 
-#: uninstall.php:53
+#: uninstall.php:56
 msgid "Released to Processing: Edit Orders for WooCommerce was deleted."
 msgstr ""

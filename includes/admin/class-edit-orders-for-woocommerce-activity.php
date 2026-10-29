@@ -144,9 +144,9 @@ class Edit_Orders_For_WooCommerce_Activity {
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 
 		$notices = array(
-			'approve' => array( '', __( 'Cancellation approved. The order is cancelled and the customer has been emailed.', 'wpheka-edit-orders-for-woocommerce' ) ),
-			'decline' => array( '', __( 'Cancellation declined. The customer has been emailed.', 'wpheka-edit-orders-for-woocommerce' ) ),
-			'error'   => array( ' w-notice--warn', __( 'That request could not be handled. It may have been answered already.', 'wpheka-edit-orders-for-woocommerce' ) ),
+			'approve' => array( 'success', __( 'Cancellation approved. The order is cancelled and the customer has been emailed.', 'wpheka-edit-orders-for-woocommerce' ) ),
+			'decline' => array( 'success', __( 'Cancellation declined. The customer has been emailed.', 'wpheka-edit-orders-for-woocommerce' ) ),
+			'error'   => array( 'error', __( 'That request could not be handled. It may have been answered already.', 'wpheka-edit-orders-for-woocommerce' ) ),
 		);
 		$reason  = 'error' === $notice ? get_transient( 'edit_orders_for_woocommerce_notice_' . get_current_user_id() ) : false;
 		if ( $reason ) {
@@ -156,7 +156,15 @@ class Edit_Orders_For_WooCommerce_Activity {
 
 		echo '<div class="w-stack edit-orders-activity">';
 		if ( isset( $notices[ $notice ] ) ) {
-			echo '<div class="w-notice' . esc_attr( $notices[ $notice ][0] ) . '" role="status"><p>' . esc_html( $notices[ $notice ][1] ) . '</p></div>';
+			\Edit_Orders_For_WooCommerce\AdminUI\Page::notices(
+				array(
+					array(
+						'id'   => 'edit-orders-notice-' . $notice,
+						'kind' => $notices[ $notice ][0],
+						'text' => esc_html( $notices[ $notice ][1] ),
+					),
+				)
+			);
 		}
 		self::render_requests();
 		self::render_log( $filter );

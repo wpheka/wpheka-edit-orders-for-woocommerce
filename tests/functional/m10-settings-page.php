@@ -355,6 +355,28 @@ $eo_check( 'one WPHEKA parent menu', 1 === $eo_parent_count );
 Edit_Orders_For_WooCommerce_Admin_Page::register_page();
 $eo_parent_count = count( array_filter( (array) $menu, static function ( $m ) { return isset( $m[2] ) && 'wpheka_plugin_panel' === $m[2]; } ) ); // phpcs:ignore Generic.Functions.FunctionCallArgumentSpacing,PEAR.Functions.FunctionCallSignature,Squiz.Functions.MultiLineFunctionDeclaration -- compact test helper.
 $eo_check( 'registering again (as a second WPHEKA plugin would) adds no second parent', 1 === $eo_parent_count );
+// Other plugins' notices stay off the page: quiet_notices() runs on its load hook and
+// empties every notice hook at in_admin_header. The notice hooks are put back after.
+global $wp_filter;
+$eo_hookname = get_plugin_page_hookname( Edit_Orders_For_WooCommerce_Admin_Page::PAGE, 'wpheka_plugin_panel' );
+$eo_check( 'the page keeps other plugins\' notices off it (quiet_notices on its load hook)', false !== has_action( 'load-' . $eo_hookname, array( \Edit_Orders_For_WooCommerce\AdminUI\Page::class, 'quiet_notices' ) ) );
+$eo_saved = array();
+foreach ( array( 'admin_notices', 'all_admin_notices', 'in_admin_header', 'admin_body_class' ) as $eo_h ) {
+	$eo_saved[ $eo_h ] = isset( $wp_filter[ $eo_h ] ) ? clone $wp_filter[ $eo_h ] : null;
+}
+remove_all_actions( 'in_admin_header' );
+add_action( 'admin_notices', '__return_null' );
+add_action( 'all_admin_notices', '__return_null' );
+\Edit_Orders_For_WooCommerce\AdminUI\Page::quiet_notices();
+do_action( 'in_admin_header' );
+$eo_check( 'and on that page no notice callback is left to print', ! has_action( 'admin_notices' ) && ! has_action( 'all_admin_notices' ) && false !== strpos( apply_filters( 'admin_body_class', '' ), 'w-quiet-notices' ) );
+foreach ( $eo_saved as $eo_h => $eo_f ) {
+	if ( $eo_f ) {
+		$wp_filter[ $eo_h ] = $eo_f; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited -- restoring the hooks the check emptied.
+	} else {
+		unset( $wp_filter[ $eo_h ] );
+	}
+}
 $eo_icon = '';
 foreach ( (array) $menu as $eo_m ) {
 	if ( isset( $eo_m[2] ) && 'wpheka_plugin_panel' === $eo_m[2] ) {
@@ -486,7 +508,13 @@ ob_start();
 Edit_Orders_For_WooCommerce_Activity::render();
 $eo_act = ob_get_clean();
 unset( $_GET['eofw_notice'] );
-$eo_check( 'after a decision the result notice shows', false !== strpos( $eo_act, 'Cancellation declined. The customer has been emailed.' ) );
+$eo_check( 'after a decision the result notice shows', false !== strpos( $eo_act, 'Cancellation declined. The customer has been emailed.' ) && false !== strpos( $eo_act, 'w-notice--success' ) );
+$_GET['eofw_notice'] = 'error';
+ob_start();
+Edit_Orders_For_WooCommerce_Activity::render();
+$eo_act = ob_get_clean();
+unset( $_GET['eofw_notice'] );
+$eo_check( 'a decision that failed shows a red notice that screen readers announce', (bool) preg_match( '/class="w-notice w-notice--error"[^>]*role="alert"/', $eo_act ) && false !== strpos( $eo_act, 'could not be handled' ) );
 Edit_Orders_For_WooCommerce_Activity::decide( wc_get_order( $eo_order->get_id() ), 'decline', 'Already shipped' );
 Edit_Orders_For_WooCommerce_Cancellation::forget_pending_count();
 
