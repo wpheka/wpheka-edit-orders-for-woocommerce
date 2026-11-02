@@ -6,7 +6,7 @@
  *
  * @package Edit_Orders_For_WooCommerce
  * @var WC_Order $order
- * @var array    $summary changes, refund, refund_manual, on_delivery, balance_order
+ * @var array    $summary changes, refund, refund_manual, on_delivery, balance_order, extra_on_delivery
  * @var string   $email_heading
  * @var string   $additional_content
  * @var bool     $sent_to_admin
@@ -35,6 +35,11 @@ do_action( 'woocommerce_email_header', $email_heading, $email ); ?>
 <?php if ( ! empty( $summary['balance_order'] ) ) : ?>
 	<?php /* translators: %s: balance order number. */ ?>
 	<p><?php printf( esc_html__( 'Thank you for paying the difference (order #%s).', 'wpheka-edit-orders-for-woocommerce' ), esc_html( $summary['balance_order'] ) ); ?></p>
+<?php endif; ?>
+
+<?php if ( ! empty( $summary['extra_on_delivery'] ) && (float) $summary['extra_on_delivery'] > 0 ) : ?>
+	<?php /* translators: %s: amount. */ ?>
+	<p><?php printf( esc_html__( 'You will pay %s more on delivery.', 'wpheka-edit-orders-for-woocommerce' ), wp_kses_post( wc_price( $summary['extra_on_delivery'], array( 'currency' => $order->get_currency() ) ) ) ); ?></p>
 <?php endif; ?>
 
 <?php if ( ! empty( $summary['refund'] ) && (float) $summary['refund'] > 0 ) : ?>

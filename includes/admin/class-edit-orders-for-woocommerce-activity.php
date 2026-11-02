@@ -292,6 +292,7 @@ class Edit_Orders_For_WooCommerce_Activity {
 		$labels   = array(
 			'edit'                => __( 'Order edited', 'wpheka-edit-orders-for-woocommerce' ),
 			'balance_created'     => __( 'Balance order created', 'wpheka-edit-orders-for-woocommerce' ),
+			'on_delivery_added'   => __( 'Extra amount added, paid on delivery', 'wpheka-edit-orders-for-woocommerce' ),
 			'balance_paid'        => __( 'Balance paid, changes applied', 'wpheka-edit-orders-for-woocommerce' ),
 			'balance_paid_failed' => __( 'Balance paid, changes failed', 'wpheka-edit-orders-for-woocommerce' ),
 			'cancel_requested'    => __( 'Cancellation requested', 'wpheka-edit-orders-for-woocommerce' ),
@@ -307,6 +308,7 @@ class Edit_Orders_For_WooCommerce_Activity {
 			'hold_released'       => 'ok',
 			'edit'                => 'info',
 			'balance_created'     => 'info',
+			'on_delivery_added'   => 'info',
 			'balance_paid'        => 'ok',
 			'balance_paid_failed' => 'bad',
 			'cancel_requested'    => 'warn',

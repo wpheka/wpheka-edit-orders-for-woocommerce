@@ -131,6 +131,12 @@ The plugin does not write names, emails, phone numbers or addresses to the log. 
 
 == Changelog ==
 
+= Unreleased =
+* Fixed: when a change to a cash on delivery order costs more, the linked order for the difference no longer sends WooCommerce's "Processing order" email to the customer or "New order" email to the store. The customer's "order updated" email now says how much more they pay on delivery. The store's "customer changed" email says it too.
+* Fixed: with Open for changes on, that linked order waits with the original order and moves to Processing when the original does, instead of going to Processing at once.
+* Fixed: cancelling, refunding or failing an order from WooCommerce's own order screen now also cancels its linked orders still to be collected on delivery. Completing the order completes them, without an email.
+* Improved: on the Activity tab such a change shows as "Extra amount added, paid on delivery" and no longer counts as a pay link. Older entries show as before.
+
 = 1.4.1 =
 * Improved: notices from WordPress and other plugins no longer show on the WPHEKA > Edit Orders page, where they printed above the header and then jumped into place. They still show on every other screen.
 * Improved: on the Activity tab, the result of approving or declining a cancellation shows with an icon. A decision that fails shows in red and is announced by screen readers.

@@ -367,6 +367,8 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 				// so the change applies now. Processing reduces its stock and runs the plan.
 				$balance->set_payment_method( $order->get_payment_method() );
 				$balance->set_payment_method_title( $order->get_payment_method_title() );
+				// Marked, so WooCommerce's order emails skip it and it follows the original's hold.
+				$balance->update_meta_data( Edit_Orders_For_WooCommerce_Balance_Orders::ON_DELIVERY_META, 'yes' );
 				$balance->save();
 				$order = wc_get_order( $order->get_id() );
 				$order->add_order_note(
@@ -381,7 +383,13 @@ class Edit_Orders_For_WooCommerce_Settlement_Executor {
 				// The gateways' filters keep a cash on delivery order without a paid date when it
 				// goes to Processing; make sure they are loaded in this request.
 				WC()->payment_gateways();
-				$balance->update_status( 'processing', __( 'Payment to be made upon delivery, with the original order.', 'wpheka-edit-orders-for-woocommerce' ) );
+				if ( Edit_Orders_For_WooCommerce_Hold::is_held( $order ) ) {
+					// It waits with the original and moves to Processing when the original does.
+					/* translators: %s: original order number. */
+					$balance->update_status( Edit_Orders_For_WooCommerce_Hold::STATUS, sprintf( __( 'Payment to be made upon delivery, with the original order. Open for changes while order #%s is.', 'wpheka-edit-orders-for-woocommerce' ), $order->get_order_number() ) );
+				} else {
+					$balance->update_status( 'processing', __( 'Payment to be made upon delivery, with the original order.', 'wpheka-edit-orders-for-woocommerce' ) );
+				}
 
 				$result = array(
 					'status'           => 'collect_on_delivery',

@@ -545,13 +545,13 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 		$row = $wpdb->get_row(
 			$wpdb->prepare(
 				"SELECT
-					COUNT( DISTINCT CASE WHEN action IN ( 'edit', 'balance_created' ) THEN order_id END ) AS edited,
+					COUNT( DISTINCT CASE WHEN action IN ( 'edit', 'balance_created', 'on_delivery_added' ) THEN order_id END ) AS edited,
 					SUM( CASE WHEN action IN ( 'edit', 'cancelled' ) AND refund_id > 0 THEN 1 ELSE 0 END ) AS refunds,
 					SUM( CASE WHEN action IN ( 'edit', 'cancelled' ) AND refund_id > 0 THEN amount ELSE 0 END ) AS refunded,
 					SUM( CASE WHEN action = 'balance_created' THEN 1 ELSE 0 END ) AS links,
 					SUM( CASE WHEN action = 'balance_paid' THEN 1 ELSE 0 END ) AS links_paid,
 					SUM( CASE WHEN action = 'balance_paid' THEN amount ELSE 0 END ) AS collected,
-					SUM( CASE WHEN actor_type IN ( 'customer', 'guest' ) AND action IN ( 'edit', 'balance_created', 'cancel_requested', 'cancelled', 'note_changed' ) THEN 1 ELSE 0 END ) AS customer,
+					SUM( CASE WHEN actor_type IN ( 'customer', 'guest' ) AND action IN ( 'edit', 'balance_created', 'on_delivery_added', 'cancel_requested', 'cancelled', 'note_changed' ) THEN 1 ELSE 0 END ) AS customer,
 					SUM( CASE WHEN action = 'cancelled' THEN 1 ELSE 0 END ) AS cancelled,
 					SUM( CASE WHEN action = 'cancelled' AND actor_type IN ( 'customer', 'guest' ) THEN 1 ELSE 0 END ) AS cancelled_customer,
 					SUM( CASE WHEN action = 'cancel_declined' THEN 1 ELSE 0 END ) AS cancel_declined,
@@ -573,6 +573,24 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 		// Right now, not the last 30 days: the Orders screen's own view, and the held orders.
 		$out['open_now'] = class_exists( 'Edit_Orders_For_WooCommerce_Orders_List' ) ? count( Edit_Orders_For_WooCommerce_Orders_List::open_order_ids() ) : 0;
 		$out['held']     = (int) wc_orders_count( Edit_Orders_For_WooCommerce_Hold::STATUS );
+		// Linked orders waiting with their original order are not held orders of their own.
+		if ( $out['held'] ) {
+			$held_ids = wc_get_orders(
+				array(
+					'type'   => 'shop_order',
+					'status' => array( 'wc-' . Edit_Orders_For_WooCommerce_Hold::STATUS ),
+					'limit'  => -1,
+					'return' => 'ids',
+				)
+			);
+			foreach ( (array) $held_ids as $held_id ) {
+				$held = wc_get_order( $held_id );
+				if ( $held && Edit_Orders_For_WooCommerce_Balance_Orders::is_balance_order( $held ) ) {
+					--$out['held'];
+				}
+			}
+			$out['held'] = max( 0, $out['held'] );
+		}
 
 		return $out;
 	}
@@ -588,7 +606,7 @@ class Edit_Orders_For_WooCommerce_Settings_Form {
 		$s     = self::current();
 		$table = Edit_Orders_For_WooCommerce_Audit_Log::table();
 		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery, WordPress.DB.DirectDatabaseQuery.NoCaching, WordPress.DB.PreparedSQL.InterpolatedNotPrepared -- the plugin's own table name, no input.
-		$edited = (bool) $wpdb->get_var( "SELECT 1 FROM {$table} WHERE action IN ( 'edit', 'balance_created' ) LIMIT 1" );
+		$edited = (bool) $wpdb->get_var( "SELECT 1 FROM {$table} WHERE action IN ( 'edit', 'balance_created', 'on_delivery_added' ) LIMIT 1" );
 
 		return array(
 			array(

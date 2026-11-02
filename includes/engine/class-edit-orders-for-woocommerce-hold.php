@@ -337,6 +337,12 @@ class Edit_Orders_For_WooCommerce_Hold {
 			return;
 		}
 
+		// A linked order collected on delivery waits with its original order and leaves
+		// with it (Balance_Orders::follow_original()): no release of its own.
+		if ( Edit_Orders_For_WooCommerce_Balance_Orders::is_balance_order( $order ) ) {
+			return;
+		}
+
 		$release_at = Edit_Orders_For_WooCommerce_Customer_Rules::window_end( $order );
 		$release_at = $release_at ? $release_at : time();
 
@@ -592,7 +598,8 @@ class Edit_Orders_For_WooCommerce_Hold {
 		$released = 0;
 		foreach ( (array) $ids as $id ) {
 			$order = wc_get_order( $id );
-			if ( $order instanceof WC_Order && 0 === Edit_Orders_For_WooCommerce_Customer_Rules::seconds_left( $order ) && self::release( $order, 'sweep' ) ) {
+			// Linked orders leave with their original order, not on their own time.
+			if ( $order instanceof WC_Order && ! Edit_Orders_For_WooCommerce_Balance_Orders::is_balance_order( $order ) && 0 === Edit_Orders_For_WooCommerce_Customer_Rules::seconds_left( $order ) && self::release( $order, 'sweep' ) ) {
 				++$released;
 			}
 		}

@@ -259,16 +259,23 @@ class Edit_Orders_For_WooCommerce_Emails {
 	 * What the customer should be told about an applied plan.
 	 *
 	 * @param array $result Executor result.
-	 * @return array changes, refund, refund_manual, on_delivery
+	 * @return array changes, refund, refund_manual, on_delivery, extra_on_delivery
 	 */
 	private static function summary( array $result ) {
 		$refund = isset( $result['refund'] ) && is_array( $result['refund'] ) ? $result['refund'] : array();
+		$extra  = 0.0;
+		if ( 'collect_on_delivery' === $result['status'] && ! empty( $result['balance_order_id'] ) ) {
+			$linked = wc_get_order( $result['balance_order_id'] );
+			$extra  = $linked ? (float) $linked->get_total() : 0.0;
+		}
 
 		return array(
-			'changes'       => $result['plan']->get_descriptions(),
-			'refund'        => $result['plan']->get_refund_amount(),
-			'refund_manual' => ! empty( $refund['manual'] ),
-			'on_delivery'   => ! empty( $refund['on_delivery'] ) || 'collect_on_delivery' === $result['status'],
+			'changes'           => $result['plan']->get_descriptions(),
+			'refund'            => $result['plan']->get_refund_amount(),
+			'refund_manual'     => ! empty( $refund['manual'] ),
+			'on_delivery'       => ! empty( $refund['on_delivery'] ) || 'collect_on_delivery' === $result['status'],
+			// Since 1.4.2: what is paid on delivery on top of the order (its linked order's total).
+			'extra_on_delivery' => $extra,
 		);
 	}
 }

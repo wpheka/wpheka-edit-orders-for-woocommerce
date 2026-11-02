@@ -6,7 +6,7 @@
  *
  * @package Edit_Orders_For_WooCommerce
  * @var WC_Order $order
- * @var array    $data changes, balance_due
+ * @var array    $data changes, balance_due, extra_on_delivery
  * @var string   $email_heading
  * @var string   $additional_content
  * @var bool     $sent_to_admin
@@ -28,6 +28,10 @@ foreach ( (array) ( isset( $data['changes'] ) ? $data['changes'] : array() ) as 
 if ( ! empty( $data['balance_due'] ) ) {
 	/* translators: %s: amount. */
 	echo "\n" . esc_html( html_entity_decode( sprintf( __( 'The change costs %s more. It applies once the customer pays.', 'wpheka-edit-orders-for-woocommerce' ), wp_strip_all_tags( wc_price( $data['balance_due'], array( 'currency' => $order->get_currency() ) ) ) ) ) ) . "\n";
+}
+if ( ! empty( $data['extra_on_delivery'] ) ) {
+	/* translators: %s: amount. */
+	echo "\n" . esc_html( html_entity_decode( sprintf( __( 'The change costs %s more, collected on delivery with the order.', 'wpheka-edit-orders-for-woocommerce' ), wp_strip_all_tags( wc_price( $data['extra_on_delivery'], array( 'currency' => $order->get_currency() ) ) ) ) ) ) . "\n";
 }
 echo "\n" . esc_url_raw( $order->get_edit_order_url() ) . "\n\n";
 

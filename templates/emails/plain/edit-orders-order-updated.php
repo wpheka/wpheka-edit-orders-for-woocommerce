@@ -34,6 +34,11 @@ if ( ! empty( $summary['balance_order'] ) ) {
 	echo esc_html( sprintf( __( 'Thank you for paying the difference (order #%s).', 'wpheka-edit-orders-for-woocommerce' ), $summary['balance_order'] ) ) . "\n\n";
 }
 
+if ( ! empty( $summary['extra_on_delivery'] ) && (float) $summary['extra_on_delivery'] > 0 ) {
+	/* translators: %s: amount. */
+	echo esc_html( html_entity_decode( sprintf( __( 'You will pay %s more on delivery.', 'wpheka-edit-orders-for-woocommerce' ), wp_strip_all_tags( wc_price( $summary['extra_on_delivery'], array( 'currency' => $order->get_currency() ) ) ) ) ) ) . "\n\n";
+}
+
 if ( ! empty( $summary['refund'] ) && (float) $summary['refund'] > 0 ) {
 	$edit_orders_for_woocommerce_amount = wp_strip_all_tags( wc_price( $summary['refund'], array( 'currency' => $order->get_currency() ) ) );
 	if ( ! empty( $summary['on_delivery'] ) ) {

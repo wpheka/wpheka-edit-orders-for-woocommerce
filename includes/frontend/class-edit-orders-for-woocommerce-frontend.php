@@ -439,16 +439,18 @@ class Edit_Orders_For_WooCommerce_Frontend {
 		 * Fired when a customer changes their own order.
 		 *
 		 * @since 1.0.0
+		 * @since 1.4.2 $data has extra_on_delivery: the amount added to collect on delivery.
 		 *
 		 * @param WC_Order $order Order.
-		 * @param array    $data  changes, balance_due.
+		 * @param array    $data  changes, balance_due, extra_on_delivery.
 		 */
 		do_action(
 			'edit_orders_for_woocommerce_customer_changed',
 			wc_get_order( $order->get_id() ),
 			array(
-				'changes'     => $result['plan']->get_descriptions(),
-				'balance_due' => ( $balance && 'balance_due' === $result['status'] ) ? $balance->get_total() : 0,
+				'changes'           => $result['plan']->get_descriptions(),
+				'balance_due'       => ( $balance && 'balance_due' === $result['status'] ) ? $balance->get_total() : 0,
+				'extra_on_delivery' => ( $balance && 'collect_on_delivery' === $result['status'] ) ? $balance->get_total() : 0,
 			)
 		);
 

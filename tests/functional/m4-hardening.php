@@ -469,7 +469,8 @@ $eo_result = Edit_Orders_For_WooCommerce_Settlement_Executor::apply(
 	)
 );
 $eo_rows   = Edit_Orders_For_WooCommerce_Audit_Log::for_order( $eo_order->get_id() );
-$eo_check( 'a staff COD edit logs one row, not a "balance paid" by the customer', is_array( $eo_result ) && 1 === count( $eo_rows ) && 'balance_created' === $eo_rows[0]['action'], wp_json_encode( wp_list_pluck( $eo_rows, 'action' ) ) );
+// Since 1.4.2 an extra amount collected on delivery has its own action, not a pay link's.
+$eo_check( 'a staff COD edit logs one row, not a "balance paid" by the customer', is_array( $eo_result ) && 1 === count( $eo_rows ) && 'on_delivery_added' === $eo_rows[0]['action'], wp_json_encode( wp_list_pluck( $eo_rows, 'action' ) ) );
 Edit_Orders_For_WooCommerce_Cancellation::execute( wc_get_order( $eo_order->get_id() ), 'customer' );
 $eo_check( 'the linked order (Processing, to collect) is cancelled', is_array( $eo_result ) && 'cancelled' === wc_get_order( $eo_result['balance_order_id'] )->get_status() );
 

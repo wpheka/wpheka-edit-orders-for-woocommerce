@@ -229,13 +229,18 @@ class Edit_Orders_For_WooCommerce_Audit_Log {
 	 * @param string   $actor  Actor.
 	 */
 	public static function log_apply( $order, $result, $actor ) {
-		$plan = $result['plan'];
+		$plan    = $result['plan'];
+		$actions = array(
+			'applied'             => 'edit',
+			// Since 1.4.2: an extra amount collected on delivery is not a pay link.
+			'collect_on_delivery' => 'on_delivery_added',
+		);
 
 		self::add(
 			array(
 				'order_id'         => $order->get_id(),
 				'actor_type'       => $actor,
-				'action'           => 'applied' === $result['status'] ? 'edit' : 'balance_created',
+				'action'           => isset( $actions[ $result['status'] ] ) ? $actions[ $result['status'] ] : 'balance_created',
 				'before'           => array( 'items' => isset( self::$before[ $order->get_id() ] ) ? self::$before[ $order->get_id() ] : array() ),
 				'after'            => array(
 					'changes'     => $plan->get_descriptions(),

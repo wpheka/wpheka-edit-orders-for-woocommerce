@@ -69,6 +69,14 @@ class Edit_Orders_For_WooCommerce_Balance_Orders {
 	const FOR_ITEM_META = '_edit_orders_for_woocommerce_for_item';
 
 	/**
+	 * Marks a linked order collected on delivery with its original order (cash on delivery):
+	 * WooCommerce's order emails are not sent for it, and it follows the original's hold.
+	 *
+	 * @since 1.4.2
+	 */
+	const ON_DELIVERY_META = '_edit_orders_for_woocommerce_on_delivery';
+
+	/**
 	 * Statuses in which a balance order is still waiting for payment.
 	 */
 	const OPEN_STATUSES = array( 'pending', 'failed', 'on-hold' );
@@ -86,6 +94,96 @@ class Edit_Orders_For_WooCommerce_Balance_Orders {
 		add_action( 'woocommerce_order_status_failed', array( __CLASS__, 'close_for_original' ) );
 		// Completed means shipped: an unpaid balance for changes to it can't apply any more.
 		add_action( 'woocommerce_order_status_completed', array( __CLASS__, 'close_for_original' ) );
+
+		// A linked order collected on delivery: the customer already has the "order updated"
+		// email and the store the change, so WooCommerce's own order emails would be noise.
+		add_filter( 'woocommerce_email_enabled_customer_processing_order', array( __CLASS__, 'skip_order_email' ), 10, 2 );
+		add_filter( 'woocommerce_email_enabled_new_order', array( __CLASS__, 'skip_order_email' ), 10, 2 );
+		add_filter( 'woocommerce_email_enabled_customer_completed_order', array( __CLASS__, 'skip_order_email' ), 10, 2 );
+		// Made while the original waits as Open for changes, it waits too, applies there and
+		// leaves the hold with the original.
+		add_action( 'woocommerce_order_status_' . Edit_Orders_For_WooCommerce_Hold::STATUS, array( __CLASS__, 'maybe_apply' ) );
+		add_action( 'woocommerce_order_status_changed', array( __CLASS__, 'follow_original' ), 20, 3 );
+	}
+
+	/**
+	 * Is this a linked order collected on delivery with its original order?
+	 *
+	 * @since 1.4.2
+	 *
+	 * @param WC_Order $order Order.
+	 * @return bool
+	 */
+	public static function is_on_delivery_balance( WC_Order $order ) {
+		return self::is_balance_order( $order ) && 'yes' === $order->get_meta( self::ON_DELIVERY_META );
+	}
+
+	/**
+	 * No "Processing order", "New order" or "Completed order" email for a linked order
+	 * collected on delivery.
+	 *
+	 * @since 1.4.2
+	 *
+	 * @param bool  $enabled Whether the email is sent.
+	 * @param mixed $order   The email's order.
+	 * @return bool
+	 */
+	public static function skip_order_email( $enabled, $order = null ) {
+		if ( $enabled && $order instanceof WC_Order && self::is_on_delivery_balance( $order ) ) {
+			return false;
+		}
+
+		return $enabled;
+	}
+
+	/**
+	 * The linked orders collected on delivery for an original order that are still to be
+	 * collected: not cancelled, refunded, failed or completed.
+	 *
+	 * @param WC_Order $order Original order.
+	 * @return WC_Order[]
+	 */
+	private static function uncollected_on_delivery( WC_Order $order ) {
+		$out = array();
+		foreach ( (array) $order->get_meta( self::APPLIED_BALANCES_META ) as $balance_id ) {
+			$balance = wc_get_order( absint( $balance_id ) );
+			if ( $balance && self::is_on_delivery_balance( $balance ) && $balance->has_status( array( 'processing', 'on-hold', Edit_Orders_For_WooCommerce_Hold::STATUS ) ) ) {
+				$out[] = $balance;
+			}
+		}
+
+		return $out;
+	}
+
+	/**
+	 * When an original order leaves Open for changes, its waiting linked orders collected on
+	 * delivery leave with it: to Processing, or cancelled with it.
+	 *
+	 * @since 1.4.2
+	 *
+	 * @param int    $order_id Order ID.
+	 * @param string $from     Old status.
+	 * @param string $to       New status.
+	 */
+	public static function follow_original( $order_id, $from, $to ) {
+		if ( Edit_Orders_For_WooCommerce_Hold::STATUS !== $from || in_array( $to, array( 'cancelled', 'refunded', 'failed' ), true ) ) {
+			return; // Cancelling is close_for_original()'s.
+		}
+
+		$order = wc_get_order( $order_id );
+		if ( ! $order || self::is_balance_order( $order ) ) {
+			return;
+		}
+
+		foreach ( self::uncollected_on_delivery( $order ) as $balance ) {
+			if ( ! $balance->has_status( Edit_Orders_For_WooCommerce_Hold::STATUS ) ) {
+				continue;
+			}
+			// The gateways' filters keep a cash on delivery order without a paid date in Processing.
+			WC()->payment_gateways();
+			/* translators: %s: original order number. */
+			$balance->update_status( 'processing', sprintf( __( 'Released to Processing with order #%s.', 'wpheka-edit-orders-for-woocommerce' ), $order->get_order_number() ) );
+		}
 	}
 
 	/**
@@ -105,6 +203,22 @@ class Edit_Orders_For_WooCommerce_Balance_Orders {
 		if ( $balance ) {
 			/* translators: %s: original order status. */
 			$balance->update_status( 'cancelled', sprintf( __( 'The original order is now %s.', 'wpheka-edit-orders-for-woocommerce' ), wc_get_order_status_name( $order->get_status() ) ) );
+		}
+
+		// Linked orders collected on delivery are never collected now: cancel them with it.
+		if ( $order->has_status( array( 'cancelled', 'refunded', 'failed' ) ) ) {
+			foreach ( self::uncollected_on_delivery( $order ) as $on_delivery ) {
+				/* translators: %s: original order status. */
+				$on_delivery->update_status( 'cancelled', sprintf( __( 'The original order is now %s.', 'wpheka-edit-orders-for-woocommerce' ), wc_get_order_status_name( $order->get_status() ) ) );
+			}
+		}
+
+		// Completed means delivered and the cash collected, the linked order's amount with it.
+		if ( $order->has_status( 'completed' ) ) {
+			foreach ( self::uncollected_on_delivery( $order ) as $on_delivery ) {
+				/* translators: %s: original order number. */
+				$on_delivery->update_status( 'completed', sprintf( __( 'Completed with order #%s.', 'wpheka-edit-orders-for-woocommerce' ), $order->get_order_number() ) );
+			}
 		}
 
 		// Paid balance orders hold money for this order too. Cancelling or refunding it from
@@ -320,7 +434,7 @@ class Edit_Orders_For_WooCommerce_Balance_Orders {
 			if ( ! $balance || ! self::is_balance_order( $balance ) || $balance->has_status( array( 'cancelled', 'refunded', 'failed', 'trash' ) ) ) {
 				continue;
 			}
-			if ( $balance->get_date_paid() || ( Edit_Orders_For_WooCommerce_Eligibility::is_pay_on_delivery( $balance ) && $balance->has_status( array( 'processing', 'on-hold', 'completed' ) ) ) ) {
+			if ( $balance->get_date_paid() || ( Edit_Orders_For_WooCommerce_Eligibility::is_pay_on_delivery( $balance ) && $balance->has_status( array( 'processing', 'on-hold', 'completed', Edit_Orders_For_WooCommerce_Hold::STATUS ) ) ) ) {
 				$held[] = $balance;
 			}
 		}
