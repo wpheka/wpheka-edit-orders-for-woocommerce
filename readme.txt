@@ -4,7 +4,7 @@ Tags: edit order, change order, cancel order, order editing, woocommerce
 Requires at least: 6.6
 Tested up to: 7.1.4
 Requires PHP: 7.4
-Stable tag: 1.4.1
+Stable tag: 1.4.2
 License: GPLv3 or later
 License URI: https://www.gnu.org/licenses/gpl-3.0.html
 
@@ -131,7 +131,7 @@ The plugin does not write names, emails, phone numbers or addresses to the log. 
 
 == Changelog ==
 
-= Unreleased =
+= 1.4.2 =
 * Fixed: when a change to a cash on delivery order costs more, the linked order for the difference no longer sends WooCommerce's "Processing order" email to the customer or "New order" email to the store. The customer's "order updated" email now says how much more they pay on delivery. The store's "customer changed" email says it too.
 * Fixed: with Open for changes on, that linked order waits with the original order and moves to Processing when the original does, instead of going to Processing at once.
 * Fixed: cancelling, refunding or failing an order from WooCommerce's own order screen now also cancels its linked orders still to be collected on delivery. Completing the order completes them, without an email.
@@ -190,6 +190,9 @@ The plugin does not write names, emails, phone numbers or addresses to the log. 
 * First release.
 
 == Upgrade Notice ==
+
+= 1.4.2 =
+Cash on delivery orders: the linked order for an extra amount no longer sends its own emails and now follows the original order.
 
 = 1.4.1 =
 Keeps other plugins' notices off the Edit Orders page and fixes the right-to-left settings layout.
