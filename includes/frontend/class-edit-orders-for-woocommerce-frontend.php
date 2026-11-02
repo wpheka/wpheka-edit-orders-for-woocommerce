@@ -450,7 +450,7 @@ class Edit_Orders_For_WooCommerce_Frontend {
 			array(
 				'changes'           => $result['plan']->get_descriptions(),
 				'balance_due'       => ( $balance && 'balance_due' === $result['status'] ) ? $balance->get_total() : 0,
-				'extra_on_delivery' => ( $balance && 'collect_on_delivery' === $result['status'] ) ? $balance->get_total() : 0,
+				'extra_on_delivery' => ( $balance && 'collect_on_delivery' === $result['status'] && (float) $balance->get_total() > 0 ) ? $balance->get_total() : 0,
 			)
 		);
 
